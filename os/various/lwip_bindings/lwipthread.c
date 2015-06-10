@@ -72,6 +72,10 @@
 #include "netif/etharp.h"
 #include "netif/ppp_oe.h"
 
+#if LWIP_DHCP
+#include <lwip/dhcp.h>
+#endif
+
 #define PERIODIC_TIMER_ID       1
 #define FRAME_RECEIVED_ID       2
 
@@ -210,7 +214,7 @@ static err_t ethernetif_init(struct netif *netif) {
  * @param[in] p pointer to a @p lwipthread_opts structure or @p NULL
  * @return The function does not return.
  */
-msg_t lwip_thread(void *p) {
+THD_FUNCTION(lwip_thread, p) {
   event_timer_t evt;
   event_listener_t el0, el1;
   struct ip_addr ip, gateway, netmask;
@@ -260,17 +264,25 @@ msg_t lwip_thread(void *p) {
   /* Goes to the final priority after initialization.*/
   chThdSetPriority(LWIP_THREAD_PRIORITY);
 
-  while (TRUE) {
+  while (true) {
     eventmask_t mask = chEvtWaitAny(ALL_EVENTS);
     if (mask & PERIODIC_TIMER_ID) {
       bool current_link_status = macPollLinkStatus(&ETHD1);
       if (current_link_status != netif_is_link_up(&thisif)) {
-        if (current_link_status)
+        if (current_link_status) {
           tcpip_callback_with_block((tcpip_callback_fn) netif_set_link_up,
                                      &thisif, 0);
-        else
+#if LWIP_DHCP
+          dhcp_start(&thisif);
+#endif
+        }
+        else {
           tcpip_callback_with_block((tcpip_callback_fn) netif_set_link_down,
                                      &thisif, 0);
+#if LWIP_DHCP
+          dhcp_stop(&thisif);
+#endif
+        }
       }
     }
     if (mask & FRAME_RECEIVED_ID) {
@@ -296,7 +308,6 @@ msg_t lwip_thread(void *p) {
       }
     }
   }
-  return 0;
 }
 
 /** @} */

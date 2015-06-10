@@ -95,8 +95,10 @@
 #define STM32_CAN_MAX_FILTERS               28
 
 /* DAC attributes.*/
-#define STM32_HAS_DAC1                      FALSE
-#define STM32_HAS_DAC2                      FALSE
+#define STM32_HAS_DAC1_CH1                  FALSE
+#define STM32_HAS_DAC1_CH2                  FALSE
+#define STM32_HAS_DAC2_CH1                  FALSE
+#define STM32_HAS_DAC2_CH2                  FALSE
 
 /* DMA attributes.*/
 #define STM32_ADVANCED_DMA                  TRUE
@@ -366,8 +368,16 @@
 #define STM32_CAN_MAX_FILTERS               28
 
 /* DAC attributes.*/
-#define STM32_HAS_DAC1                      FALSE
-#define STM32_HAS_DAC2                      FALSE
+#define STM32_HAS_DAC1_CH1                  TRUE
+#define STM32_DAC1_CH1_DMA_MSK              (STM32_DMA_STREAM_ID_MSK(1, 5))
+#define STM32_DAC1_CH1_DMA_CHN              0x00700000
+
+#define STM32_HAS_DAC1_CH2                  TRUE
+#define STM32_DAC1_CH2_DMA_MSK              (STM32_DMA_STREAM_ID_MSK(1, 6))
+#define STM32_DAC1_CH2_DMA_CHN              0x07000000
+
+#define STM32_HAS_DAC2_CH1                  FALSE
+#define STM32_HAS_DAC2_CH2                  FALSE
 
 /* DMA attributes.*/
 #define STM32_ADVANCED_DMA                  TRUE
@@ -626,8 +636,10 @@
 #define STM32_CAN_MAX_FILTERS               28
 
 /* DAC attributes.*/
-#define STM32_HAS_DAC1                      FALSE
-#define STM32_HAS_DAC2                      FALSE
+#define STM32_HAS_DAC1_CH1                  FALSE
+#define STM32_HAS_DAC1_CH2                  FALSE
+#define STM32_HAS_DAC2_CH1                  FALSE
+#define STM32_HAS_DAC2_CH2                  FALSE
 
 /* DMA attributes.*/
 #define STM32_ADVANCED_DMA                  TRUE
@@ -830,8 +842,10 @@
 #define STM32_HAS_CAN2                      FALSE
 
 /* DAC attributes.*/
-#define STM32_HAS_DAC1                      FALSE
-#define STM32_HAS_DAC2                      FALSE
+#define STM32_HAS_DAC1_CH1                  FALSE
+#define STM32_HAS_DAC1_CH2                  FALSE
+#define STM32_HAS_DAC2_CH1                  FALSE
+#define STM32_HAS_DAC2_CH2                  FALSE
 
 /* DMA attributes.*/
 #define STM32_ADVANCED_DMA                  TRUE

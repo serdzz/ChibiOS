@@ -52,6 +52,11 @@
  */
 #define USB_SET_ADDRESS_MODE                USB_EARLY_SET_ADDRESS
 
+/**
+ * @brief   Method for set address acknowledge.
+ */
+#define USB_SET_ADDRESS_ACK_HANDLING        USB_SET_ADDRESS_ACK_SW
+
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
@@ -154,12 +159,12 @@
 #endif
 
 #if STM32_USB_USE_OTG1 &&                                                \
-    !CORTEX_IS_VALID_KERNEL_PRIORITY(STM32_USB_OTG1_IRQ_PRIORITY)
+    !OSAL_IRQ_IS_VALID_PRIORITY(STM32_USB_OTG1_IRQ_PRIORITY)
 #error "Invalid IRQ priority assigned to OTG1"
 #endif
 
 #if STM32_USB_USE_OTG2 &&                                                \
-    !CORTEX_IS_VALID_KERNEL_PRIORITY(STM32_USB_OTG2_IRQ_PRIORITY)
+    !OSAL_IRQ_IS_VALID_PRIORITY(STM32_USB_OTG2_IRQ_PRIORITY)
 #error "Invalid IRQ priority assigned to OTG2"
 #endif
 
@@ -538,7 +543,7 @@ extern "C" {
   void usb_lld_stall_in(USBDriver *usbp, usbep_t ep);
   void usb_lld_clear_out(USBDriver *usbp, usbep_t ep);
   void usb_lld_clear_in(USBDriver *usbp, usbep_t ep);
-  msg_t usb_lld_pump(void *p);
+  void usb_lld_pump(void *p);
 #ifdef __cplusplus
 }
 #endif

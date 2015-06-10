@@ -591,16 +591,14 @@ static void RemoveHandler(eventid_t id) {
  * Green LED blinker thread, times are in milliseconds.
  */
 static THD_WORKING_AREA(waThread1, 128);
-static msg_t Thread1(void *arg) {
+static THD_FUNCTION(Thread1, arg) {
 
   (void)arg;
   chRegSetThreadName("blinker");
-  while (TRUE) {
+  while (true) {
     palTogglePad(GPIOC, GPIOC_LED);
     chThdSleepMilliseconds(fs_ready ? 125 : 500);
   }
-
-  return MSG_OK; /* warning suppressor */
 }
 
 /*
@@ -680,7 +678,7 @@ int main(void) {
    */
   chEvtRegister(&inserted_event, &el0, 0);
   chEvtRegister(&removed_event, &el1, 1);
-  while (TRUE) {
+  while (true) {
     if (!shelltp && (SDU2.config->usbp->state == USB_ACTIVE))
       shelltp = shellCreate(&shell_cfg1, SHELL_WA_SIZE, NORMALPRIO);
     else if (chThdTerminatedX(shelltp)) {

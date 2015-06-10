@@ -40,13 +40,14 @@
  */
 #if !defined(FALSE) || defined(__DOXYGEN__)
 #define FALSE               0
+
 #endif
 
 /**
  * @brief   Generic 'true' boolean constant.
  */
 #if !defined(TRUE) || defined(__DOXYGEN__)
-#define TRUE                (!FALSE)
+#define TRUE                1
 #endif
 /** @} */
 
@@ -98,7 +99,7 @@ typedef uint32_t            ucnt_t;         /**< Generic unsigned counter.  */
 /**
  * @brief   Optimized thread function declaration macro.
  */
-#define PORT_THD_FUNCTION(tname, arg) msg_t tname(void *arg)
+#define PORT_THD_FUNCTION(tname, arg) void tname(void *arg)
 
 /**
  * @brief   Packed variable specifier.
