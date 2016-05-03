@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -24,17 +24,21 @@
  *          - STM32_HSE_BYPASS (optionally).
  *          .
  *          One of the following macros must also be defined:
- *          - STM32L1XX_MD for Ultra Low Power Medium-density devices.
- *          - STM32L1XX_MDP for Ultra Low Power Medium-density Plus devices.
- *          - STM32L1XX_HD for Ultra Low Power High-density devices.
+ *          - STM32L100xB, STM32L100xBA, STM32L100xC.
+ *          - STM32L151xB, STM32L151xBA, STM32L151xC, STM32L151xCA,
+ *            STM32L151xD, STM32L151xDX, STM32L151xE.
+ *          - STM32L152xB, STM32L152xBA, STM32L152xC, STM32L152xCA,
+ *            STM32L152xD, STM32L152xDX, STM32L152xE.
+ *          - STM32L162xC, STM32L162xCA, STM32L162xD, STM32L162xDX,
+ *            STM32L162xE.
  *          .
  *
  * @addtogroup HAL
  * @{
  */
 
-#ifndef _HAL_LLD_H_
-#define _HAL_LLD_H_
+#ifndef HAL_LLD_H
+#define HAL_LLD_H
 
 #include "stm32_registry.h"
 
@@ -46,13 +50,22 @@
  * @name    Platform identification
  * @{
  */
-#if defined(STM32L1XX_MD) || defined(__DOXYGEN__)
+#if defined(STM32L100xB) || defined(STM32L151xB) ||                         \
+    defined(STM32L152xB) || defined(__DOXYGEN__)
 #define PLATFORM_NAME           "STM32L1xx Ultra Low Power Medium Density"
 
-#elif defined(STM32L1XX_MDP)
+#elif defined(STM32L100xBA) || defined(STM32L100xC)  ||                     \
+      defined(STM32L151xBA) || defined(STM32L151xC)  ||                     \
+      defined(STM32L151xCA) || defined(STM32L152xBA) ||                     \
+      defined(STM32L152xC)  || defined(STM32L152xCA) ||                     \
+      defined(STM32L162xC)  || defined(STM32L162xCA)
 #define PLATFORM_NAME           "STM32L1xx Ultra Low Power Medium Density Plus"
 
-#elif defined(STM32L1XX_HD)
+#elif defined(STM32L151xD)  || defined(STM32L151xDX) ||                     \
+      defined(STM32L151xE)  || defined(STM32L152xD)  ||                     \
+      defined(STM32L152xDX) || defined(STM32L152xE)  ||                     \
+      defined(STM32L162xD)  || defined(STM32L162xDX) ||                     \
+      defined(STM32L162xE)
 #define PLATFORM_NAME           "STM32L1xx Ultra Low Power High Density"
 
 #else
@@ -150,10 +163,10 @@
 #define STM32_MCOSEL_LSE        (7 << 24)   /**< LSE clock on MCO pin.      */
 
 #define STM32_MCOPRE_DIV1       (0 << 28)   /**< MCO divided by 1.          */
-#define STM32_MCOPRE_DIV2       (1 << 28)   /**< MCO divided by 1.          */
-#define STM32_MCOPRE_DIV4       (2 << 28)   /**< MCO divided by 1.          */
-#define STM32_MCOPRE_DIV8       (3 << 28)   /**< MCO divided by 1.          */
-#define STM32_MCOPRE_DIV16      (4 << 28)   /**< MCO divided by 1.          */
+#define STM32_MCOPRE_DIV2       (1 << 28)   /**< MCO divided by 2.          */
+#define STM32_MCOPRE_DIV4       (2 << 28)   /**< MCO divided by 4.          */
+#define STM32_MCOPRE_DIV8       (3 << 28)   /**< MCO divided by 8.          */
+#define STM32_MCOPRE_DIV16      (4 << 28)   /**< MCO divided by 16.         */
 /** @} */
 
 /**
@@ -244,7 +257,7 @@
 /**
  * @brief   Enables or disables the LSE clock source.
  */
-#if !defined(STM32_HSE_ENABLED) || defined(__DOXYGEN__)
+#if !defined(STM32_LSE_ENABLED) || defined(__DOXYGEN__)
 #define STM32_LSE_ENABLED           FALSE
 #endif
 
@@ -598,7 +611,6 @@
 
 /**
  * @brief   MSI frequency.
- * @note    Values are taken from the STM8Lxx datasheet.
  */
 #if STM32_MSIRANGE == STM32_MSIRANGE_64K
 #define STM32_MSICLK                65500
@@ -715,7 +727,7 @@
 #endif
 
 /**
- * @brief   MCO divider clock.
+ * @brief   MCO clock before divider.
  */
 #if (STM32_MCOSEL == STM32_MCOSEL_NOCLOCK) || defined(__DOXYGEN__)
 #define STM32_MCODIVCLK             0
@@ -842,6 +854,6 @@ extern "C" {
 }
 #endif
 
-#endif /* _HAL_LLD_H_ */
+#endif /* HAL_LLD_H */
 
 /** @} */

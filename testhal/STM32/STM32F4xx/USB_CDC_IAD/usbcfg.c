@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -15,6 +15,12 @@
 */
 
 #include "hal.h"
+
+/*
+ * Virtual serial ports over USB.
+ */
+SerialUSBDriver SDU1;
+SerialUSBDriver SDU2;
 
 #define USB_DEVICE_VID                  0xF055  /* You MUST change this.*/
 #define USB_DEVICE_PID                  0xE063  /* You MUST change this.*/
@@ -394,6 +400,13 @@ static void usb_event(USBDriver *usbp, usbevent_t event) {
     chSysUnlockFromISR();
     return;
   case USB_EVENT_SUSPEND:
+    chSysLockFromISR();
+
+    /* Disconnection event on suspend.*/
+    sduDisconnectI(&SDU1);
+    sduDisconnectI(&SDU2);
+
+    chSysUnlockFromISR();
     return;
   case USB_EVENT_WAKEUP:
     return;
@@ -418,13 +431,26 @@ static bool requests_hook(USBDriver *usbp) {
 }
 
 /*
+ * Handles the USB driver global events.
+ */
+static void sof_handler(USBDriver *usbp) {
+
+  (void)usbp;
+
+  osalSysLockFromISR();
+  sduSOFHookI(&SDU1);
+  sduSOFHookI(&SDU2);
+  osalSysUnlockFromISR();
+}
+
+/*
  * USB driver configuration.
  */
 const USBConfig usbcfg = {
   usb_event,
   get_descriptor,
   requests_hook,
-  NULL
+  sof_handler
 };
 
 /*

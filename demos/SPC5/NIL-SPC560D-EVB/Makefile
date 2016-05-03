@@ -82,35 +82,43 @@ PROJECT = ch
 
 # Imported source files and paths
 CHIBIOS = ../../..
+# Startup files.
+include $(CHIBIOS)/os/common/startup/e200/compilers/GCC/mk/startup_spc560dxx.mk
+# HAL-OSAL files (optional).
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/hal/boards/ST_EVB_SPC560D/board.mk
 include $(CHIBIOS)/os/hal/ports/SPC5/SPC560Dxx/platform.mk
 include $(CHIBIOS)/os/hal/osal/nil/osal.mk
+# RTOS files (optional).
 include $(CHIBIOS)/os/nil/nil.mk
-include $(CHIBIOS)/os/nil/ports/e200/compilers/GCC/mk/port_spc560dxx.mk
-#include $(CHIBIOS)/test/nil/test.mk
+include $(CHIBIOS)/os/common/ports/e200/compilers/GCC/mk/port.mk
+# Other files (optional).
+include $(CHIBIOS)/test/nil/test.mk
 
 # Define linker script file here
-LDSCRIPT= $(PORTLD)/SPC560D40.ld
+LDSCRIPT= $(STARTUPLD)/SPC560D40.ld
 
 # C sources here.
-CSRC = $(PORTSRC) \
+CSRC = $(STARTUPSRC) \
        $(KERNSRC) \
-       $(TESTSRC) \
-       $(HALSRC) \
+       $(PORTSRC) \
        $(OSALSRC) \
+       $(HALSRC) \
        $(PLATFORMSRC) \
        $(BOARDSRC) \
+       $(TESTSRC) \
        main.c
 
 # C++ sources here.
 CPPSRC =
 
 # List ASM source files here
-ASMSRC = $(PORTASM)
+ASMSRC =
+ASMXSRC = $(STARTUPASM) $(PORTASM) $(OSALASM)
 
-INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
-         $(HALINC) $(OSALINC) $(PLATFORMINC) $(BOARDINC) \
+INCDIR = $(CHIBIOS)/os/license \
+         $(STARTUPINC) $(KERNINC) $(PORTINC) $(OSALINC) \
+         $(HALINC) $(PLATFORMINC) $(BOARDINC) $(TESTINC) \
          $(CHIBIOS)/os/various
 
 #
@@ -143,10 +151,10 @@ MOT  = $(CP) -O srec
 BIN  = $(CP) -O binary
 
 # Define C warning options here
-CWARN = -Wall -Wextra -Wstrict-prototypes
+CWARN = -Wall -Wextra -Wundef -Wstrict-prototypes
 
 # Define C++ warning options here
-CPPWARN = -Wall -Wextra
+CPPWARN = -Wall -Wextra -Wundef
 
 #
 # Compiler settings
@@ -175,5 +183,5 @@ ULIBS =
 # End of user defines
 ##############################################################################
 
-RULESPATH = $(CHIBIOS)/os/common/ports/e200/compilers/GCC
+RULESPATH = $(CHIBIOS)/os/common/startup/e200/compilers/GCC
 include $(RULESPATH)/rules.mk

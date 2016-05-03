@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@
  * @{
  */
 
-#ifndef _STM32_ISR_H_
-#define _STM32_ISR_H_
+#ifndef STM32_ISR_H
+#define STM32_ISR_H
 
 /*===========================================================================*/
 /* Driver constants.                                                         */
@@ -52,12 +52,22 @@
 #define STM32_TIM2_HANDLER          VectorB0
 #define STM32_TIM3_HANDLER          VectorB4
 #define STM32_TIM4_HANDLER          VectorB8
+#define STM32_TIM5_HANDLER          VectorF8
+#define STM32_TIM6_HANDLER          VectorEC
+#define STM32_TIM7_HANDLER          VectorF0
 #define STM32_TIM9_HANDLER          VectorA4
+#define STM32_TIM10_HANDLER         VectorA8
+#define STM32_TIM11_HANDLER         VectorAC
 
 #define STM32_TIM2_NUMBER           28
 #define STM32_TIM3_NUMBER           29
 #define STM32_TIM4_NUMBER           30
+#define STM32_TIM5_NUMBER           46
+#define STM32_TIM6_NUMBER           43
+#define STM32_TIM7_NUMBER           44
 #define STM32_TIM9_NUMBER           25
+#define STM32_TIM10_NUMBER          26
+#define STM32_TIM11_NUMBER          27
 
 /*
  * USART units.
@@ -100,6 +110,6 @@
 /* External declarations.                                                    */
 /*===========================================================================*/
 
-#endif /* _STM32_ISR_H_ */
+#endif /* STM32_ISR_H */
 
 /** @} */

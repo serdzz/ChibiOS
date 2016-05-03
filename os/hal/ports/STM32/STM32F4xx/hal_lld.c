@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@
  * @brief   CMSIS system core clock variable.
  * @note    It is declared in system_stm32f4xx.h.
  */
-uint32_t SystemCoreClock = STM32_SYSCLK;
+uint32_t SystemCoreClock = STM32_HCLK;
 
 /*===========================================================================*/
 /* Driver local variables and types.                                         */
@@ -232,12 +232,24 @@ void stm32_clock_init(void) {
     ;
 #endif
 
+#if STM32_ACTIVATE_PLLSAI
+  /* PLLSAI activation.*/
+  RCC->PLLSAICFGR = STM32_PLLSAIN | STM32_PLLSAIR | STM32_PLLSAIQ;
+  RCC->DCKCFGR = (RCC->DCKCFGR & ~RCC_DCKCFGR_PLLSAIDIVR) | STM32_PLLSAIR_POST;
+  RCC->CR |= RCC_CR_PLLSAION;
+
+  /* Waiting for PLL lock.*/
+  while (!(RCC->CR & RCC_CR_PLLSAIRDY))
+    ;
+#endif
+
   /* Other clock-related settings (dividers, MCO etc).*/
   RCC->CFGR = STM32_MCO2PRE | STM32_MCO2SEL | STM32_MCO1PRE | STM32_MCO1SEL |
-              STM32_RTCPRE | STM32_PPRE2 | STM32_PPRE1 | STM32_HPRE;
+              STM32_I2SSRC | STM32_RTCPRE | STM32_PPRE2 | STM32_PPRE1 |
+              STM32_HPRE;
 
   /* Flash setup.*/
-#if defined(STM32_USE_REVISION_A_FIX)
+#if !defined(STM32_REMOVE_REVISION_A_FIX)
   /* Some old revisions of F4x MCUs randomly crashes with compiler
      optimizations enabled AND flash caches enabled. */
   if ((DBGMCU->IDCODE == 0x20006411) && (SCB->CPUID == 0x410FC241))
@@ -250,7 +262,7 @@ void stm32_clock_init(void) {
                FLASH_ACR_DCEN | STM32_FLASHBITS;
 #endif
 
-  /* Switching to the configured clock source if it is different from MSI.*/
+  /* Switching to the configured clock source if it is different from HSI.*/
 #if (STM32_SW != STM32_SW_HSI)
   RCC->CFGR |= STM32_SW;        /* Switches on the selected clock source.   */
   while ((RCC->CFGR & RCC_CFGR_SWS) != (STM32_SW << 2))

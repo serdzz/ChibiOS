@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 #include "ch.h"
 #include "hal.h"
-#include "test.h"
+#include "ch_test.h"
 
 /*
  * Blinker thread #1.
  */
-static THD_WORKING_AREA(waThread1, 128);
-static THD_FUNCTION(Thread1, arg) {
+THD_WORKING_AREA(waThread1, 128);
+THD_FUNCTION(Thread1, arg) {
 
   (void)arg;
 
@@ -50,8 +50,8 @@ static THD_FUNCTION(Thread1, arg) {
 /*
  * Blinker thread #2.
  */
-static THD_WORKING_AREA(waThread2, 128);
-static THD_FUNCTION(Thread2, arg) {
+THD_WORKING_AREA(waThread2, 128);
+THD_FUNCTION(Thread2, arg) {
 
   (void)arg;
 
@@ -112,7 +112,7 @@ int main(void) {
    */
   while (true) {
     if (palReadPad(GPIOA, GPIOA_BUTTON))
-      TestThread(&SD1);
+      test_execute((BaseSequentialStream *)&SD1);
     chThdSleepMilliseconds(500);
   }
 }

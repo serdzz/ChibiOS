@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "nil.h"
+#include "ch.h"
 
 #if defined(__SPC5_HAL__)
 #include "platform.h"
@@ -92,17 +92,17 @@
 /**
  * @brief   Size in bits of the @p systick_t type.
  */
-#define OSAL_ST_RESOLUTION                  NIL_CFG_ST_RESOLUTION
+#define OSAL_ST_RESOLUTION                  CH_CFG_ST_RESOLUTION
 
 /**
  * @brief   Required systick frequency or resolution.
  */
-#define OSAL_ST_FREQUENCY                   NIL_CFG_ST_FREQUENCY
+#define OSAL_ST_FREQUENCY                   CH_CFG_ST_FREQUENCY
 
 /**
  * @brief   Systick mode required by the underlying OS.
  */
-#if (NIL_CFG_ST_TIMEDELTA == 0) || defined(__DOXYGEN__)
+#if (CH_CFG_ST_TIMEDELTA == 0) || defined(__DOXYGEN__)
 #define OSAL_ST_MODE                        OSAL_ST_MODE_PERIODIC
 #else
 #define OSAL_ST_MODE                        OSAL_ST_MODE_FREERUNNING
@@ -117,8 +117,12 @@
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
 
-#if NIL_CFG_USE_EVENTS == FALSE
-#error "OSAL requires NIL_CFG_USE_EVENTS=TRUE"
+#if CH_CFG_USE_SEMAPHORES == FALSE
+#error "OSAL requires CH_CFG_USE_SEMAPHORES=TRUE"
+#endif
+
+#if CH_CFG_USE_EVENTS == FALSE
+#error "OSAL requires CH_CFG_USE_EVENTS=TRUE"
 #endif
 
 #if !(OSAL_ST_MODE == OSAL_ST_MODE_NONE) &&                                 \
@@ -258,19 +262,17 @@ typedef struct {
  *
  * @api
  */
-#define osalDbgCheck(c) chDbgAssert(c, "parameter check")
+#define osalDbgCheck(c) chDbgCheck(c)
 
 /**
  * @brief   I-Class state check.
- * @note    Not implemented in this simplified OSAL.
  */
-#define osalDbgCheckClassI() /*chDbgCheckClassI()*/
+#define osalDbgCheckClassI() chDbgCheckClassI()
 
 /**
  * @brief   S-Class state check.
- * @note    Not implemented in this simplified OSAL.
  */
-#define osalDbgCheckClassS() /*chDbgCheckClassS()*/
+#define osalDbgCheckClassS() chDbgCheckClassS()
 /** @} */
 
 /**
@@ -342,6 +344,52 @@ typedef struct {
  * @api
  */
 #define OSAL_US2ST(usec) US2ST(usec)
+/** @} */
+
+/**
+ * @name    Time conversion utilities for the realtime counter
+ * @{
+ */
+/**
+ * @brief   Seconds to realtime counter.
+ * @details Converts from seconds to realtime counter cycles.
+ * @note    The macro assumes that @p freq >= @p 1.
+ *
+ * @param[in] freq      clock frequency, in Hz, of the realtime counter
+ * @param[in] sec       number of seconds
+ * @return              The number of cycles.
+ *
+ * @api
+ */
+#define OSAL_S2RTC(freq, sec) S2RTC(freq, sec)
+
+/**
+ * @brief   Milliseconds to realtime counter.
+ * @details Converts from milliseconds to realtime counter cycles.
+ * @note    The result is rounded upward to the next millisecond boundary.
+ * @note    The macro assumes that @p freq >= @p 1000.
+ *
+ * @param[in] freq      clock frequency, in Hz, of the realtime counter
+ * @param[in] msec      number of milliseconds
+ * @return              The number of cycles.
+ *
+ * @api
+ */
+#define OSAL_MS2RTC(freq, msec) MS2RTC(freq, msec)
+
+/**
+ * @brief   Microseconds to realtime counter.
+ * @details Converts from microseconds to realtime counter cycles.
+ * @note    The result is rounded upward to the next microsecond boundary.
+ * @note    The macro assumes that @p freq >= @p 1000000.
+ *
+ * @param[in] freq      clock frequency, in Hz, of the realtime counter
+ * @param[in] usec      number of microseconds
+ * @return              The number of cycles.
+ *
+ * @api
+ */
+#define OSAL_US2RTC(freq, usec) US2RTC(freq, usec)
 /** @} */
 
 /**
@@ -502,7 +550,7 @@ static inline void osalSysUnlockFromISR(void) {
  *
  * @xclass
  */
-static inline syssts_t osalSysGetStatusAndLockX(void)  {
+static inline syssts_t osalSysGetStatusAndLockX(void) {
 
   return chSysGetStatusAndLockX();
 }
@@ -745,7 +793,7 @@ static inline void osalThreadQueueObjectInit(threads_queue_t *tqp) {
 static inline msg_t osalThreadEnqueueTimeoutS(threads_queue_t *tqp,
                                               systime_t time) {
 
-  return chSemWaitTimeout(&tqp->sem, time);
+  return chSemWaitTimeoutS(&tqp->sem, time);
 }
 
 /**

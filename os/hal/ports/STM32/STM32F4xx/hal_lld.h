@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -33,14 +33,16 @@
  *            High-performance STM32 F-4 devices.
  *          - STM32F401xC, STM32F401xE for High-performance STM32 F-4 devices.
  *          - STM32F411xE for High-performance STM32 F-4 devices.
+ *          - STM32F446xx for High-performance STM32 F-4 devices.
+ *          * STM32F469xx, STM32F479xx for High-performance STM32 F-4 devices.
  *          .
  *
  * @addtogroup HAL
  * @{
  */
 
-#ifndef _HAL_LLD_H_
-#define _HAL_LLD_H_
+#ifndef HAL_LLD_H
+#define HAL_LLD_H
 
 #include "stm32_registry.h"
 
@@ -57,7 +59,16 @@
  * @name    Platform identification macros
  * @{
  */
-#if defined(STM32F439xx) || defined(__DOXYGEN__)
+#if defined(STM32F479xx) || defined(__DOXYGEN__)
+#define PLATFORM_NAME           "STM32F479 High Performance with DSP and FPU"
+
+#elif defined(STM32F469xx)
+#define PLATFORM_NAME           "STM32F469 High Performance with DSP and FPU"
+
+#elif defined(STM32F446xx)
+#define PLATFORM_NAME           "STM32F446 High Performance with DSP and FPU"
+
+#elif defined(STM32F439xx)
 #define PLATFORM_NAME           "STM32F439 High Performance with DSP and FPU"
 
 #elif defined(STM32F429xx)
@@ -90,8 +101,17 @@
 #elif defined(STM32F411xE)
 #define PLATFORM_NAME           "STM32F411xE High Performance with DSP and FPU"
 
-#elif defined(STM32F2XX)
-#define PLATFORM_NAME           "STM32F2xx High Performance"
+#elif defined(STM32F205xx)
+#define PLATFORM_NAME           "STM32F405 High Performance"
+
+#elif defined(STM32F215xx)
+#define PLATFORM_NAME           "STM32F415 High Performance"
+
+#elif defined(STM32F207xx)
+#define PLATFORM_NAME           "STM32F407 High Performance"
+
+#elif defined(STM32F217xx)
+#define PLATFORM_NAME           "STM32F417 High Performance"
 
 #else
 #error "STM32F2xx/F4xx device not specified"
@@ -102,13 +122,10 @@
  * @name    Absolute Maximum Ratings
  * @{
  */
-/**
- * @name    Absolute Maximum Ratings
- * @{
- */
 #if defined(STM32F427xx) || defined(STM32F437xx) ||                         \
     defined(STM32F429xx) || defined(STM32F439xx) ||                         \
-    defined(__DOXYGEN__)
+    defined(STM32F446xx) || defined(STM32F469xx) ||                         \
+    defined(STM32F479xx) || defined(__DOXYGEN__)
 /**
  * @brief   Absolute maximum system clock.
  */
@@ -288,9 +305,9 @@
  * @name    PWR_CR register bits definitions
  * @{
  */
-#define STM32_VOS_SCALE3        (PWR_CR_VOS_0)
-#define STM32_VOS_SCALE2        (PWR_CR_VOS_1)
-#define STM32_VOS_SCALE1        (PWR_CR_VOS_1 | PWR_CR_VOS_0)
+#define STM32_VOS_SCALE3        0x00004000
+#define STM32_VOS_SCALE2        0x00008000
+#define STM32_VOS_SCALE1        0x0000C000
 #define STM32_PLS_MASK          (7 << 5)    /**< PLS bits mask.             */
 #define STM32_PLS_LEV0          (0 << 5)    /**< PVD level 0.               */
 #define STM32_PLS_LEV1          (1 << 5)    /**< PVD level 1.               */
@@ -361,6 +378,13 @@
 #define STM32_I2SSRC_MASK       (1 << 23)   /**< I2CSRC mask.               */
 #define STM32_I2SSRC_PLLI2S     (0 << 23)   /**< I2SSRC is PLLI2S.          */
 #define STM32_I2SSRC_CKIN       (1 << 23)   /**< I2S_CKIN is PLLI2S.        */
+
+#define STM32_SAISRC_NOCLOCK    (0 << 23)   /**< No clock.                  */
+#define STM32_SAISRC_PLL        (1 << 23)   /**< SAI_CKIN is PLL.           */
+#define STM32_SAIR_DIV2         (0 << 16)   /**< R divided by 2.            */
+#define STM32_SAIR_DIV4         (1 << 16)   /**< R divided by 4.            */
+#define STM32_SAIR_DIV8         (2 << 16)   /**< R divided by 8.            */
+#define STM32_SAIR_DIV16        (3 << 16)   /**< R divided by 16.           */
 
 #define STM32_MCO1PRE_MASK      (7 << 24)   /**< MCO1PRE mask.              */
 #define STM32_MCO1PRE_DIV1      (0 << 24)   /**< MCO1 divided by 1.         */
@@ -683,6 +707,30 @@
 #if !defined(STM32_PLLI2SR_VALUE) || defined(__DOXYGEN__)
 #define STM32_PLLI2SR_VALUE         5
 #endif
+
+/**
+ * @brief   PLLSAIQ value.
+ * @note    The allowed values are 2..15.
+ */
+#if !defined(STM32_PLLSAIQ_VALUE) || defined(__DOXYGEN__)
+#define STM32_PLLSAIQ_VALUE         8
+#endif
+
+/**
+ * @brief   PLLSAIQ value.
+ * @note    The allowed values are 49..432.
+ */
+#if !defined(STM32_PLLSAIN_VALUE) || defined(__DOXYGEN__)
+#define STM32_PLLSAIN_VALUE         120
+#endif
+
+/**
+ * @brief   PLLSAIQ value.
+ * @note    The allowed values are 2..7.
+ */
+#if !defined(STM32_PLLSAIR_VALUE) || defined(__DOXYGEN__)
+#define STM32_PLLSAIR_VALUE         4
+#endif
 /** @} */
 
 /*===========================================================================*/
@@ -711,7 +759,8 @@
  * @note    The values are valid for 2.7V to 3.6V supply range.
  */
 #if defined(STM32F429_439xx) || defined(STM32F427_437xx) ||                 \
-    defined(STM32F40_41xxx) || defined(__DOXYGEN__)
+    defined(STM32F40_41xxx)  || defined(STM32F446xx)     ||                 \
+    defined(STM32F469_479xx) || defined(__DOXYGEN__)
 #if ((STM32_VDD >= 270) && (STM32_VDD <= 360)) || defined(__DOXYGEN__)
 #define STM32_0WS_THRESHOLD         30000000
 #define STM32_1WS_THRESHOLD         60000000
@@ -1121,6 +1170,7 @@
 
 /* Calculating VOS settings, it is different for each sub-platform.*/
 #if defined(STM32F429_439xx) || defined(STM32F427_437xx) ||                 \
+    defined(STM32F446xx)     || defined(STM32F469_479xx) ||                 \
     defined(__DOXYGEN__)
 #if STM32_SYSCLK <= 120000000
 #define STM32_VOS                   STM32_VOS_SCALE3
@@ -1276,6 +1326,52 @@
 #define STM32_PLLI2SR               (STM32_PLLI2SR_VALUE << 28)
 #else
 #error "invalid STM32_PLLI2SR_VALUE value specified"
+#endif
+
+/*
+ * PLLSAI enable check.
+ */
+#if !defined(STM32_SAISRC)
+#define STM32_SAISRC                STM32_SAISRC_NOCLOCK
+#endif
+
+/**
+ * @brief   PLL activation flag.
+ */
+#if (STM32_SAISRC == STM32_SAISRC_PLL) || defined(__DOXYGEN__)
+#define STM32_ACTIVATE_PLLSAI       TRUE
+#else
+#define STM32_ACTIVATE_PLLSAI       FALSE
+#endif
+
+/**
+ * @brief   STM32_PLLSAIN field.
+ */
+#if ((STM32_PLLSAIN_VALUE >= 49) && (STM32_PLLSAIN_VALUE <= 432)) ||        \
+    defined(__DOXYGEN__)
+#define STM32_PLLSAIN               (STM32_PLLSAIN_VALUE << 6)
+#else
+#error "invalid STM32_PLLSAIN_VALUE value specified"
+#endif
+
+/**
+ * @brief   STM32_PLLSAIQ field.
+ */
+#if ((STM32_PLLSAIQ_VALUE >= 2) && (STM32_PLLSAIQ_VALUE <= 15)) ||          \
+    defined(__DOXYGEN__)
+#define STM32_PLLSAIQ               (STM32_PLLSAIQ_VALUE << 24)
+#else
+#error "invalid STM32_PLLSAIR_VALUE value specified"
+#endif
+
+/**
+ * @brief   STM32_PLLSAIR field.
+ */
+#if ((STM32_PLLSAIR_VALUE >= 2) && (STM32_PLLSAIR_VALUE <= 7)) ||           \
+    defined(__DOXYGEN__)
+#define STM32_PLLSAIR               (STM32_PLLSAIR_VALUE << 28)
+#else
+#error "invalid STM32_PLLSAIR_VALUE value specified"
 #endif
 
 /**
@@ -1484,6 +1580,6 @@ extern "C" {
 }
 #endif
 
-#endif /* _HAL_LLD_H_ */
+#endif /* HAL_LLD_H */
 
 /** @} */
