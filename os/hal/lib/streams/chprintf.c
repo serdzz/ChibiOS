@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -312,8 +312,7 @@ int chprintf(BaseSequentialStream *chp, const char *fmt, ...) {
 
 /**
  * @brief   System formatted output function.
- * @details This function implements a minimal @p vprintf()-like functionality
- *          with output on a @p BaseSequentialStream.
+ * @details This function implements a minimal @p snprintf()-like functionality.
  *          The general parameters format is: %[-][width|*][.precision|*][l|L]p.
  *          The following parameter types (p) are supported:
  *          - <b>x</b> hexadecimal integer.

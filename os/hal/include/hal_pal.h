@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -98,9 +98,41 @@
 #define PAL_HIGH                        1U
 /** @} */
 
+/**
+ * @name    PAL event modes
+ * @{
+ */
+#define PAL_EVENT_MODE_EDGES_MASK   3U  /**< @brief Mask of edges field.    */
+#define PAL_EVENT_MODE_DISABLED     0U  /**< @brief Channel disabled.       */
+#define PAL_EVENT_MODE_RISING_EDGE  1U  /**< @brief Rising edge callback.   */
+#define PAL_EVENT_MODE_FALLING_EDGE 2U  /**< @brief Falling edge callback.  */
+#define PAL_EVENT_MODE_BOTH_EDGES   3U  /**< @brief Both edges callback.    */
+/** @} */
+
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
 /*===========================================================================*/
+
+/**
+ * @name    PAL configuration options
+ * @{
+ */
+/**
+ * @brief   Enables synchronous APIs.
+ * @note    Disabling this option saves both code and data space.
+ */
+#if !defined(PAL_USE_CALLBACKS) || defined(__DOXYGEN__)
+#define PAL_USE_CALLBACKS           TRUE
+#endif
+
+/**
+ * @brief   Enables synchronous APIs.
+ * @note    Disabling this option saves both code and data space.
+ */
+#if !defined(PAL_USE_WAIT) || defined(__DOXYGEN__)
+#define PAL_USE_WAIT                TRUE
+#endif
+/** @} */
 
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
@@ -109,6 +141,33 @@
 /*===========================================================================*/
 /* Driver data structures and types.                                         */
 /*===========================================================================*/
+
+/**
+ * @brief   Type of a PAL event callback.
+ */
+typedef void (*palcallback_t)(void *arg);
+
+/**
+ * @brief   Type of a PAL event record.
+ */
+typedef struct {
+#if (PAL_USE_WAIT == TRUE) || defined(__DOXYGEN__)
+  /**
+   * @brief   Threads queued for an event.
+   */
+  threads_queue_t       threads;
+#endif
+#if (PAL_USE_CALLBACKS == TRUE) || defined(__DOXYGEN__)
+  /**
+   * @brief   Event callback.
+   */
+  palcallback_t         cb;
+  /**
+   * @brief   Event callback argument.
+   */
+  void                  *arg;
+#endif
+} palevent_t;
 
 #include "hal_pal_lld.h"
 
@@ -155,8 +214,8 @@ typedef struct {
  * @brief   Bits group mask helper.
  * @details This macro calculates the mask of a bits group.
  *
- * @param[in] width         group width
- * @return                  The group mask.
+ * @param[in] width     group width
+ * @return              The group mask.
  */
 #if !defined(PAL_GROUP_MASK) || defined(__DOXYGEN__)
 #define PAL_GROUP_MASK(width) ((ioportmask_t)(1U << (width)) - 1U)
@@ -170,7 +229,7 @@ typedef struct {
  * @param[in] name      name of the IOBus variable
  * @param[in] port      I/O port descriptor
  * @param[in] width     bus width in bits
- * @param[in] offset     bus bit offset within the port
+ * @param[in] offset    bus bit offset within the port
  */
 #define _IOBUS_DATA(name, port, width, offset)                              \
   {port, PAL_GROUP_MASK(width), offset}
@@ -186,6 +245,116 @@ typedef struct {
 #define IOBUS_DECL(name, port, width, offset)                               \
   IOBus name = _IOBUS_DATA(name, port, width, offset)
 
+#if (PAL_USE_CALLBACKS == TRUE) || (PAL_USE_WAIT == TRUE) ||                \
+    defined(__DOXYGEN__)
+/**
+ * @name    Low level driver helper macros
+ * @{
+ */
+#if ((PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == TRUE)) ||              \
+    defined(__DOXYGEN__)
+/**
+ * @brief   Initializes a PAL event object.
+ *
+ * @param[in] e         event index
+ *
+ * @notapi
+ */
+#define _pal_init_event(e)                                                  \
+  do {                                                                      \
+    osalThreadQueueObjectInit(&_pal_events[e].threads);                     \
+    _pal_events[e].cb = NULL;                                               \
+    _pal_events[e].arg = NULL;                                              \
+  } while (false)
+#endif /* (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == TRUE) */
+
+#if (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == FALSE)
+#define _pal_init_event(e)                                                  \
+  do {                                                                      \
+    _pal_events[e].cb = NULL;                                               \
+    _pal_events[e].arg = NULL;                                              \
+  } while (false)
+#endif /* (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == FALSE) */
+
+#if (PAL_USE_CALLBACKS == FALSE) && (PAL_USE_WAIT == TRUE)
+#define _pal_init_event(e)                                                  \
+  do {                                                                      \
+    osalThreadQueueObjectInit(&_pal_events[e].threads);                     \
+  } while (false)
+#endif /* (PAL_USE_CALLBACKS == FALSE) && (PAL_USE_WAIT == TRUE) */
+
+#if ((PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == TRUE)) || defined(__DOXYGEN__)
+/**
+ * @brief   Clears a PAL event object.
+ *
+ * @param[in] e         event index
+ *
+ * @notapi
+ */
+#define _pal_clear_event(e)                                                 \
+  do {                                                                      \
+    osalThreadDequeueAllI(&_pal_events[pad].threads, MSG_RESET);            \
+    _pal_events[e].cb = NULL;                                               \
+    _pal_events[e].arg = NULL;                                              \
+  } while (false)
+#endif /* (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == TRUE) */
+
+#if (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == FALSE)
+#define _pal_clear_event(e)                                                 \
+  do {                                                                      \
+    _pal_events[e].cb = NULL;                                               \
+    _pal_events[e].arg = NULL;                                              \
+  } while (false)
+#endif /* (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == FALSE) */
+
+#if (PAL_USE_CALLBACKS == FALSE) && (PAL_USE_WAIT == TRUE)
+#define _pal_clear_event(e)                                                 \
+  do {                                                                      \
+    osalThreadDequeueAllI(&_pal_events[pad].threads, MSG_RESET);            \
+  } while (false)
+#endif /* (PAL_USE_CALLBACKS == FALSE) && (PAL_USE_WAIT == TRUE) */
+
+/**
+ * @brief   Common ISR code.
+ * @note    This macro is meant to be used in the low level drivers
+ *          implementation only.
+ *
+ * @param[in] e         event index
+ *
+ * @notapi
+ */
+#if ((PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == TRUE)) ||              \
+    defined(__DOXYGEN__)
+#define _pal_isr_code(e) do {                                               \
+  if (_pal_events[e].cb != NULL) {                                          \
+    _pal_events[e].cb(_pal_events[e].arg);                                  \
+  }                                                                         \
+  osalSysLockFromISR();                                                     \
+  osalThreadDequeueAllI(&_pal_events[e].threads, MSG_OK);                   \
+  osalSysUnlockFromISR();                                                   \
+} while (false)
+#endif /* (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == TRUE) */
+
+#if (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == FALSE)
+#define _pal_isr_code(e) do {                                               \
+  if (_pal_events[e].cb != NULL) {                                          \
+    _pal_events[e].cb(_pal_events[e].arg);                                  \
+  }                                                                         \
+} while (false)
+#endif /* (PAL_USE_CALLBACKS == TRUE) && (PAL_USE_WAIT == FALSE) */
+
+#if ((PAL_USE_CALLBACKS == FALSE) && (PAL_USE_WAIT == TRUE)) ||             \
+    defined(__DOXYGEN__)
+#define _pal_isr_code(e) do {                                               \
+  osalSysLockFromISR();                                                     \
+  osalThreadDequeueAllI(&_pal_events[e].threads, MSG_OK);                   \
+  osalSysUnlockFromISR();                                                   \
+} while (false)
+#endif /* (PAL_USE_CALLBACKS == FALSE) && (PAL_USE_WAIT == TRUE) */
+
+/** @} */
+#endif /* (PAL_USE_CALLBACKS == TRUE) || (PAL_USE_WAIT == TRUE) */
+
 /**
  * @name    Macro Functions
  * @{
@@ -195,18 +364,16 @@ typedef struct {
  * @note    This function is implicitly invoked by @p halInit(), there is
  *          no need to explicitly initialize the driver.
  *
- * @param[in] config pointer to an architecture specific configuration
- *            structure. This structure is defined in the low level driver
- *            header.
- *
  * @init
  */
+#if defined(PAL_NEW_INIT) || defined(__DOXYGEN__)
+#define palInit() pal_lld_init()
+#else
 #define palInit(config) pal_lld_init(config)
+#endif
 
 /**
  * @brief   Reads the physical I/O port states.
- * @note    The default implementation always return zero and computes the
- *          parameter eventual side effects.
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -224,8 +391,6 @@ typedef struct {
  * @brief   Reads the output latch.
  * @details The purpose of this function is to read back the latched output
  *          value.
- * @note    The default implementation always return zero and computes the
- *          parameter eventual side effects.
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -241,8 +406,6 @@ typedef struct {
 
 /**
  * @brief   Writes a bits mask on a I/O port.
- * @note    The default implementation does nothing except computing the
- *          parameters eventual side effects.
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -262,9 +425,6 @@ typedef struct {
  *          architectures, for atomicity and/or portability reasons you may
  *          need to enclose port I/O operations between @p osalSysLock() and
  *          @p osalSysUnlock().
- * @note    The default implementation is non atomic and not necessarily
- *          optimal. Low level drivers may  optimize the function by using
- *          specific hardware or coding.
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -285,9 +445,6 @@ typedef struct {
  *          architectures,  for atomicity and/or portability reasons you may
  *          need to enclose port I/O operations between @p osalSysLock() and
  *          @p osalSysUnlock().
- * @note    The default implementation is non atomic and not necessarily
- *          optimal. Low level drivers may  optimize the function by using
- *          specific hardware or coding.
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -308,9 +465,6 @@ typedef struct {
  *          architectures, for atomicity and/or portability reasons you may
  *          need to enclose port I/O operations between @p osalSysLock() and
  *          @p osalSysUnlock().
- * @note    The default implementation is non atomic and not necessarily
- *          optimal. Low level drivers may  optimize the function by using
- *          specific hardware or coding.
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -346,6 +500,10 @@ typedef struct {
 
 /**
  * @brief   Writes a group of bits.
+ * @note    The operation is not guaranteed to be atomic on all the
+ *          architectures, for atomicity and/or portability reasons you may
+ *          need to enclose port I/O operations between @p osalSysLock() and
+ *          @p osalSysUnlock().
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -366,11 +524,14 @@ typedef struct {
   pal_lld_writegroup(port, mask, offset, bits)
 #endif
 
-
 /**
  * @brief   Pads group mode setup.
  * @details This function programs a pads group belonging to the same port
  *          with the specified mode.
+ * @note    The operation is not guaranteed to be atomic on all the
+ *          architectures, for atomicity and/or portability reasons you may
+ *          need to enclose port I/O operations between @p osalSysLock() and
+ *          @p osalSysUnlock().
  * @note    Programming an unknown or unsupported mode is silently ignored.
  * @note    The function can be called from any context.
  *
@@ -390,10 +551,6 @@ typedef struct {
 
 /**
  * @brief   Reads an input pad logic state.
- * @note    The default implementation not necessarily optimal. Low level
- *          drivers may  optimize the function by using specific hardware
- *          or coding.
- * @note    The default implementation internally uses the @p palReadPort().
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -416,11 +573,6 @@ typedef struct {
  *          architectures, for atomicity and/or portability reasons you may
  *          need to enclose port I/O operations between @p osalSysLock() and
  *          @p osalSysUnlock().
- * @note    The default implementation is non atomic and not necessarily
- *          optimal. Low level drivers may  optimize the function by using
- *          specific hardware or coding.
- * @note    The default implementation internally uses the @p palReadLatch()
- *          and @p palWritePort().
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -444,10 +596,6 @@ typedef struct {
  *          architectures, for atomicity and/or portability reasons you may
  *          need to enclose port I/O operations between @p osalSysLock() and
  *          @p osalSysUnlock().
- * @note    The default implementation is non atomic and not necessarily
- *          optimal. Low level drivers may  optimize the function by using
- *          specific hardware or coding.
- * @note    The default implementation internally uses the @p palSetPort().
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -467,10 +615,6 @@ typedef struct {
  *          architectures, for atomicity and/or portability reasons you may
  *          need to enclose port I/O operations between @p osalSysLock() and
  *          @p osalSysUnlock().
- * @note    The default implementation is non atomic and not necessarily
- *          optimal. Low level drivers may  optimize the function by using
- *          specific hardware or coding.
- * @note    The default implementation internally uses the @p palClearPort().
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -490,10 +634,6 @@ typedef struct {
  *          architectures, for atomicity and/or portability reasons you may
  *          need to enclose port I/O operations between @p osalSysLock() and
  *          @p osalSysUnlock().
- * @note    The default implementation is non atomic and not necessarily
- *          optimal. Low level drivers may  optimize the function by using
- *          specific hardware or coding.
- * @note    The default implementation internally uses the @p palTogglePort().
  * @note    The function can be called from any context.
  *
  * @param[in] port      port identifier
@@ -510,9 +650,10 @@ typedef struct {
 /**
  * @brief   Pad mode setup.
  * @details This function programs a pad with the specified mode.
- * @note    The default implementation not necessarily optimal. Low level
- *          drivers may  optimize the function by using specific hardware
- *          or coding.
+ * @note    The operation is not guaranteed to be atomic on all the
+ *          architectures, for atomicity and/or portability reasons you may
+ *          need to enclose port I/O operations between @p osalSysLock() and
+ *          @p osalSysUnlock().
  * @note    Programming an unknown or unsupported mode is silently ignored.
  * @note    The function can be called from any context.
  *
@@ -548,6 +689,10 @@ typedef struct {
 
 /**
  * @brief   Writes a logic state on an output line.
+ * @note    The operation is not guaranteed to be atomic on all the
+ *          architectures, for atomicity and/or portability reasons you may
+ *          need to enclose port I/O operations between @p osalSysLock() and
+ *          @p osalSysUnlock().
  * @note    The function can be called from any context.
  *
  * @param[in] line      line identifier
@@ -564,6 +709,10 @@ typedef struct {
 
 /**
  * @brief   Sets a line logic state to @p PAL_HIGH.
+ * @note    The operation is not guaranteed to be atomic on all the
+ *          architectures, for atomicity and/or portability reasons you may
+ *          need to enclose port I/O operations between @p osalSysLock() and
+ *          @p osalSysUnlock().
  * @note    The function can be called from any context.
  *
  * @param[in] line      line identifier
@@ -578,6 +727,10 @@ typedef struct {
 
 /**
  * @brief   Clears a line logic state to @p PAL_LOW.
+ * @note    The operation is not guaranteed to be atomic on all the
+ *          architectures, for atomicity and/or portability reasons you may
+ *          need to enclose port I/O operations between @p osalSysLock() and
+ *          @p osalSysUnlock().
  * @note    The function can be called from any context.
  *
  * @param[in] line      line identifier
@@ -592,6 +745,10 @@ typedef struct {
 
 /**
  * @brief   Toggles a line logic state.
+ * @note    The operation is not guaranteed to be atomic on all the
+ *          architectures, for atomicity and/or portability reasons you may
+ *          need to enclose port I/O operations between @p osalSysLock() and
+ *          @p osalSysUnlock().
  * @note    The function can be called from any context.
  *
  * @param[in] line      line identifier
@@ -606,6 +763,10 @@ typedef struct {
 
 /**
  * @brief   Line mode setup.
+ * @note    The operation is not guaranteed to be atomic on all the
+ *          architectures, for atomicity and/or portability reasons you may
+ *          need to enclose port I/O operations between @p osalSysLock() and
+ *          @p osalSysUnlock().
  * @note    The function can be called from any context.
  *
  * @param[in] line      line identifier
@@ -619,6 +780,175 @@ typedef struct {
 #else
 #define palSetLineMode(line, mode) pal_lld_setlinemode(line, mode)
 #endif
+
+#if (PAL_USE_CALLBACKS == TRUE) || (PAL_USE_WAIT == TRUE) ||                \
+    defined(__DOXYGEN__)
+/**
+ * @brief   Pad event enable.
+ * @note    Programming an unknown or unsupported mode is silently ignored.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ * @param[in] mode      pad event mode
+ *
+ * @iclass
+ */
+#if !defined(pal_lld_enablepadevent) || defined(__DOXYGEN__)
+#define palEnablePadEventI(port, pad, mode)
+#else
+#define palEnablePadEventI(port, pad, mode)                                 \
+  pal_lld_enablepadevent(port, pad, mode)
+#endif
+
+/**
+ * @brief   Pad event disable.
+ * @details This function also disables previously programmed event callbacks.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ *
+ * @iclass
+ */
+#if !defined(pal_lld_disablepadevent) || defined(__DOXYGEN__)
+#define palDisablePadEventI(port, pad)
+#else
+#define palDisablePadEventI(port, pad)                                      \
+  pal_lld_disablepadevent(port, pad)
+#endif
+
+/**
+ * @brief   Pad event enable.
+ * @note    Programming an unknown or unsupported mode is silently ignored.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ * @param[in] mode      pad event mode
+ *
+ * @api
+ */
+#define palEnablePadEvent(port, pad, mode)                                  \
+  do {                                                                      \
+    osalSysLock();                                                          \
+    palEnablePadEventI(port, pad, mode);                                    \
+    osalSysUnlock();                                                        \
+  } while (false)
+
+/**
+ * @brief   Pad event disable.
+ * @details This function also disables previously programmed event callbacks.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ *
+ * @api
+ */
+#define palDisablePadEvent(port, pad)                                       \
+  do {                                                                      \
+    osalSysLock();                                                          \
+    palDisablePadEventI(port, pad);                                         \
+    osalSysUnlock();                                                        \
+  } while (false)
+
+/**
+ * @brief   Line event enable.
+ * @note    Programming an unknown or unsupported mode is silently ignored.
+ *
+ * @param[in] line      line identifier
+ * @param[in] mode      line event mode
+ *
+ * @iclass
+ */
+#if !defined(pal_lld_enablelineevent) || defined(__DOXYGEN__)
+#define palEnableLineEventI(line, mode)                                     \
+  palEnablePadEventI(PAL_PORT(line), PAL_PAD(line), mode)
+#else
+#define palEnableLineEventI(line, mode)                                     \
+    pal_lld_enablelineevent(line, mode)
+#endif
+
+/**
+ * @brief   Line event disable.
+ * @details This function also disables previously programmed event callbacks.
+ *
+ * @param[in] line      line identifier
+ *
+ * @iclass
+ */
+#if !defined(pal_lld_disablelineevent) || defined(__DOXYGEN__)
+#define palDisableLineEventI(line)                                          \
+  palDisablePadEventI(PAL_PORT(line), PAL_PAD(line))
+#else
+#define palDisableLineEventI(line) pal_lld_disablelineevent(line)
+#endif
+
+/**
+ * @brief   Line event enable.
+ * @note    Programming an unknown or unsupported mode is silently ignored.
+ *
+ * @param[in] line      line identifier
+ * @param[in] mode      line event mode
+ *
+ * @api
+ */
+#define palEnableLineEvent(line, mode)                                      \
+  do {                                                                      \
+    osalSysLock();                                                          \
+    palEnableLineEventI(line, mode);                                        \
+    osalSysUnlock();                                                        \
+  } while (false)
+
+/**
+ * @brief   Line event disable.
+ * @details This function also disables previously programmed event callbacks.
+ *
+ * @param[in] line      line identifier
+ *
+ * @api
+ */
+#define palDisableLineEvent(line)                                           \
+  do {                                                                      \
+    osalSysLock();                                                          \
+    palDisableLineEventI(line);                                             \
+    osalSysUnlock();                                                        \
+  } while (false)
+
+#endif /* PAL_USE_CALLBACKS || PAL_USE_WAIT */
+
+#if (PAL_USE_CALLBACKS == TRUE) || defined(__DOXYGEN__)
+/**
+ * @brief   Associates a callback to a pad.
+ *
+ * @param[in] port      port identifier
+ * @param[in] pad       pad number within the port
+ * @param[in] cb        event callback function
+ * @param[in] arg       callback argument
+ *
+ * @api
+ */
+#define palSetPadCallback(port, pad, cb, arg)                               \
+  do {                                                                      \
+    osalSysLock();                                                          \
+    palSetPadCallbackI(port, pad, cb, arg);                                 \
+    osalSysUnlock();                                                        \
+  } while (false)
+
+/**
+ * @brief   Associates a callback to a line.
+ *
+ * @param[in] line      line identifier
+ * @param[in] cb        event callback function
+ * @param[in] arg       callback argument
+ *
+ * @iclass
+ */
+#define palSetLineCallback(line, cb, arg)                                   \
+  do {                                                                      \
+    osalSysLock();                                                          \
+    palSetLineCallbackI(line, cb, arg);                                     \
+    osalSysUnlock();                                                        \
+  } while (false)
+#endif /* PAL_USE_CALLBACKS == TRUE */
+
 /** @} */
 
 /*===========================================================================*/
@@ -628,9 +958,22 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
-  ioportmask_t palReadBus(IOBus *bus);
-  void palWriteBus(IOBus *bus, ioportmask_t bits);
-  void palSetBusMode(IOBus *bus, iomode_t mode);
+  ioportmask_t palReadBus(const IOBus *bus);
+  void palWriteBus(const IOBus *bus, ioportmask_t bits);
+  void palSetBusMode(const IOBus *bus, iomode_t mode);
+#if (PAL_USE_CALLBACKS == TRUE) || defined(__DOXYGEN__)
+  void palSetPadCallbackI(ioportid_t port, iopadid_t pad,
+                          palcallback_t cb, void *arg);
+  void palSetLineCallbackI(ioline_t line, palcallback_t cb, void *arg);
+#endif /* PAL_USE_CALLBACKS == TRUE */
+#if (PAL_USE_WAIT == TRUE) || defined(__DOXYGEN__)
+  msg_t palWaitPadTimeoutS(ioportid_t port, iopadid_t pad,
+                           sysinterval_t timeout);
+  msg_t palWaitPadTimeout(ioportid_t port, iopadid_t pad,
+                          sysinterval_t timeout);
+  msg_t palWaitLineTimeoutS(ioline_t line, sysinterval_t timeout);
+  msg_t palWaitLineTimeout(ioline_t line, sysinterval_t timeout);
+#endif /* PAL_USE_WAIT == TRUE */
 #ifdef __cplusplus
 }
 #endif

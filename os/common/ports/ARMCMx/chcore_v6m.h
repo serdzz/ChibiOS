@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio.
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio.
 
     This file is part of ChibiOS.
 
@@ -118,11 +118,11 @@
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
 
-#if !defined(CH_CUSTOMER_LICENSED_PORT_CM0)
-#error "CH_CUSTOMER_LICENSED_PORT_CM0 not defined"
+#if !defined(CH_CUSTOMER_LIC_PORT_CM0)
+#error "CH_CUSTOMER_LIC_PORT_CM0 not defined"
 #endif
 
-#if CH_CUSTOMER_LICENSED_PORT_CM0 == FALSE
+#if CH_CUSTOMER_LIC_PORT_CM0 == FALSE
 #error "ChibiOS Cortex-M0 port not licensed"
 #endif
 

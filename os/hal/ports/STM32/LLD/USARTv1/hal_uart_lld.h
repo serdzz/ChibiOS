@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -226,7 +226,8 @@
 #error "UART4 not present in the selected device"
 #endif
 
-#if !defined(STM32F2XX) && !defined(STM32F4XX)
+#if !defined(STM32F2XX) && !defined(STM32F4XX) && !defined(STM32L151xE)  && \
+    !defined(STM32L152xE) && !defined(STM32L162xE)
 #error "UART4 DMA access not supported in this platform"
 #endif
 #endif /* STM32_UART_USE_UART4 */
@@ -236,7 +237,8 @@
 #error "UART5 not present in the selected device"
 #endif
 
-#if !defined(STM32F2XX) && !defined(STM32F4XX)
+#if !defined(STM32F2XX) && !defined(STM32F4XX) && !defined(STM32L151xE)  && \
+    !defined(STM32L152xE) && !defined(STM32L162xE)
 #error "UART5 DMA access not supported in this platform"
 #endif
 #endif /* STM32_UART_USE_UART5 */

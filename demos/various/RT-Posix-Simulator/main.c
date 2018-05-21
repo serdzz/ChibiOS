@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+=======
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
+>>>>>>> upstream/master
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -16,7 +20,10 @@
 
 #include "ch.h"
 #include "hal.h"
+<<<<<<< HEAD
 #include "test.h"
+=======
+>>>>>>> upstream/master
 #include "shell.h"
 #include "chprintf.h"
 
@@ -30,6 +37,7 @@ static thread_t *cdtp;
 static thread_t *shelltp1;
 static thread_t *shelltp2;
 
+<<<<<<< HEAD
 static void cmd_mem(BaseSequentialStream *chp, int argc, char *argv[]) {
   size_t n, size;
 
@@ -85,6 +93,9 @@ static const ShellCommand commands[] = {
   {"mem", cmd_mem},
   {"threads", cmd_threads},
   {"test", cmd_test},
+=======
+static const ShellCommand commands[] = {
+>>>>>>> upstream/master
   {NULL, NULL}
 };
 
@@ -128,7 +139,12 @@ static void termination_handler(eventid_t id) {
     chThdSleepMilliseconds(10);
     cputs("Init: shell on SD1 terminated");
     chSysLock();
+<<<<<<< HEAD
     chOQResetI(&SD1.oqueue);
+=======
+    oqResetI(&SD1.oqueue);
+    chSchRescheduleS();
+>>>>>>> upstream/master
     chSysUnlock();
   }
   if (shelltp2 && chThdTerminatedX(shelltp2)) {
@@ -137,7 +153,12 @@ static void termination_handler(eventid_t id) {
     chThdSleepMilliseconds(10);
     cputs("Init: shell on SD2 terminated");
     chSysLock();
+<<<<<<< HEAD
     chOQResetI(&SD2.oqueue);
+=======
+    oqResetI(&SD2.oqueue);
+    chSchRescheduleS();
+>>>>>>> upstream/master
     chSysUnlock();
   }
 }
@@ -156,12 +177,23 @@ static void sd1_handler(eventid_t id) {
   flags = chEvtGetAndClearFlags(&sd1fel);
   if ((flags & CHN_CONNECTED) && (shelltp1 == NULL)) {
     cputs("Init: connection on SD1");
+<<<<<<< HEAD
     shelltp1 = shellCreate(&shell_cfg1, SHELL_WA_SIZE, NORMALPRIO + 1);
+=======
+    shelltp1 = chThdCreateFromHeap(NULL, SHELL_WA_SIZE,
+                                   "shell1", NORMALPRIO + 10,
+                                   shellThread, (void *)&shell_cfg1);
+>>>>>>> upstream/master
   }
   if (flags & CHN_DISCONNECTED) {
     cputs("Init: disconnection on SD1");
     chSysLock();
+<<<<<<< HEAD
     chIQResetI(&SD1.iqueue);
+=======
+    iqResetI(&SD1.iqueue);
+    chSchRescheduleS();
+>>>>>>> upstream/master
     chSysUnlock();
   }
 }
@@ -178,12 +210,23 @@ static void sd2_handler(eventid_t id) {
   flags = chEvtGetAndClearFlags(&sd2fel);
   if ((flags & CHN_CONNECTED) && (shelltp2 == NULL)) {
     cputs("Init: connection on SD2");
+<<<<<<< HEAD
     shelltp2 = shellCreate(&shell_cfg2, SHELL_WA_SIZE, NORMALPRIO + 10);
+=======
+    shelltp2 = chThdCreateFromHeap(NULL, SHELL_WA_SIZE,
+                                   "shell2", NORMALPRIO + 10,
+                                   shellThread, (void *)&shell_cfg2);
+>>>>>>> upstream/master
   }
   if (flags & CHN_DISCONNECTED) {
     cputs("Init: disconnection on SD2");
     chSysLock();
+<<<<<<< HEAD
     chIQResetI(&SD2.iqueue);
+=======
+    iqResetI(&SD2.iqueue);
+    chSchRescheduleS();
+>>>>>>> upstream/master
     chSysUnlock();
   }
 }
@@ -225,8 +268,13 @@ int main(void) {
   /*
    * Console thread started.
    */
+<<<<<<< HEAD
   cdtp = chThdCreateFromHeap(NULL, CONSOLE_WA_SIZE, NORMALPRIO + 1,
                              console_thread, NULL);
+=======
+  cdtp = chThdCreateFromHeap(NULL, CONSOLE_WA_SIZE, "console",
+                             NORMALPRIO + 1, console_thread, NULL);
+>>>>>>> upstream/master
 
   /*
    * Initializing connection/disconnection events.

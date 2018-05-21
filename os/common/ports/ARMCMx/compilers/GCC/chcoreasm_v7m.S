@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio.
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio.
 
     This file is part of ChibiOS.
 
@@ -18,7 +18,7 @@
 */
 
 /**
- * @file    compilers/GCC/chcoreasm_v7m.s
+ * @file    compilers/GCC/chcoreasm_v7m.S
  * @brief   ARMv7-M architecture port low level code.
  *
  * @addtogroup ARMCMx_GCC_CORE

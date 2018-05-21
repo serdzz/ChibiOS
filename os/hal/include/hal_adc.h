@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ typedef enum {
   ADC_READY = 2,                            /**< Ready.                     */
   ADC_ACTIVE = 3,                           /**< Converting.                */
   ADC_COMPLETE = 4,                         /**< Conversion complete.       */
-  ADC_ERROR = 5                             /**< Conversion complete.       */
+  ADC_ERROR = 5                             /**< Conversion error.          */
 } adcstate_t;
 
 #include "hal_adc_lld.h"
@@ -230,8 +230,12 @@ typedef enum {
     (adcp)->grpp->error_cb(adcp, err);                                      \
     if ((adcp)->state == ADC_ERROR)                                         \
       (adcp)->state = ADC_READY;                                            \
+      (adcp)->grpp = NULL;                                                  \
   }                                                                         \
-  (adcp)->grpp = NULL;                                                      \
+  else {                                                                    \
+    (adcp)->state = ADC_READY;                                              \
+    (adcp)->grpp = NULL;                                                    \
+  }                                                                         \
   _adc_timeout_isr(adcp);                                                   \
 }
 /** @} */

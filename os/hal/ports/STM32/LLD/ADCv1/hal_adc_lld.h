@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -430,6 +430,14 @@ extern "C" {
   void adc_lld_start_conversion(ADCDriver *adcp);
   void adc_lld_stop_conversion(ADCDriver *adcp);
   void adc_lld_serve_interrupt(ADCDriver *adcp);
+  void adcSTM32EnableVREF(void);
+  void adcSTM32DisableVREF(void);
+  void adcSTM32EnableTS(void);
+  void adcSTM32DisableTS(void);
+#if defined(ADC_CCR_VBATEN)
+  void adcSTM32EnableVBAT(void);
+  void adcSTM32DisableVBAT(void);
+#endif
 #ifdef __cplusplus
 }
 #endif

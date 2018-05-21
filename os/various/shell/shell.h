@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -32,16 +32,6 @@
 /*===========================================================================*/
 /* Module constants.                                                         */
 /*===========================================================================*/
-
-/**
- * @brief   Prompt string
- */
-#define SHELL_PROMPT_STR            "ch> "
-
-/**
- * @brief   Newline string
- */
-#define SHELL_NEWLINE_STR            "\r\n"
 
 /**
  * @brief   Shell History Constants
@@ -100,6 +90,20 @@
  */
 #if !defined(SHELL_USE_ESC_SEQ) || defined(__DOXYGEN__)
 #define SHELL_USE_ESC_SEQ           FALSE
+#endif
+
+/**
+ * @brief   Prompt string
+ */
+#if !defined(SHELL_PROMPT_STR) || defined(__DOXYGEN__)
+#define SHELL_PROMPT_STR            "ch> "
+#endif
+
+/**
+ * @brief   Newline string
+ */
+#if !defined(SHELL_NEWLINE_STR) || defined(__DOXYGEN__)
+#define SHELL_NEWLINE_STR            "\r\n"
 #endif
 
 /*===========================================================================*/
@@ -170,10 +174,10 @@ typedef struct {
  *
  * @notapi
  */
-#define _shell_reset_cur(stream)  chprintf(stream, "\033[%dD\033[%dC",        \
-                                           SHELL_MAX_LINE_LENGTH +            \
-                                           strlen(SHELL_PROMPT_STR) + 2,      \
-                                           strlen(SHELL_PROMPT_STR))
+#define _shell_reset_cur(stream) chprintf(stream, "\033[%dD\033[%dC",       \
+                                          SHELL_MAX_LINE_LENGTH +           \
+                                          strlen(SHELL_PROMPT_STR) + 2,     \
+                                          strlen(SHELL_PROMPT_STR))
 
 /**
  * @brief   Send escape codes to clear the rest of the line
@@ -192,8 +196,8 @@ typedef struct {
  *
  * @api
  */
-#define shellUsage(stream, message)                                           \
-  chprintf(stream, "Usage: %s"SHELL_NEWLINE_STR, message)
+#define shellUsage(stream, message)                                         \
+  chprintf(stream, "Usage: %s" SHELL_NEWLINE_STR, message)
 
 /*===========================================================================*/
 /* External declarations.                                                    */
@@ -209,7 +213,8 @@ extern "C" {
   void shellInit(void);
   THD_FUNCTION(shellThread, p);
   void shellExit(msg_t msg);
-  bool shellGetLine(ShellConfig *scfg, char *line, unsigned size, ShellHistory *shp);
+  bool shellGetLine(ShellConfig *scfg, char *line,
+                    unsigned size, ShellHistory *shp);
 #ifdef __cplusplus
 }
 #endif

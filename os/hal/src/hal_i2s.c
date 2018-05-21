@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -104,10 +104,14 @@ void i2sStop(I2SDriver *i2sp) {
   osalDbgCheck(i2sp != NULL);
 
   osalSysLock();
+
   osalDbgAssert((i2sp->state == I2S_STOP) || (i2sp->state == I2S_READY),
                 "invalid state");
+
   i2s_lld_stop(i2sp);
-  i2sp->state = I2S_STOP;
+  i2sp->config = NULL;
+  i2sp->state  = I2S_STOP;
+
   osalSysUnlock();
 }
 

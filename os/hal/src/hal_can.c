@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -67,10 +67,11 @@ void canInit(void) {
  */
 void canObjectInit(CANDriver *canp) {
 
-  canp->state    = CAN_STOP;
-  canp->config   = NULL;
+  canp->state       = CAN_STOP;
+  canp->config      = NULL;
   osalThreadQueueObjectInit(&canp->txqueue);
   osalThreadQueueObjectInit(&canp->rxqueue);
+#if CAN_ENFORCE_USE_CALLBACKS == FALSE
   osalEventObjectInit(&canp->rxfull_event);
   osalEventObjectInit(&canp->txempty_event);
   osalEventObjectInit(&canp->error_event);
@@ -78,6 +79,14 @@ void canObjectInit(CANDriver *canp) {
   osalEventObjectInit(&canp->sleep_event);
   osalEventObjectInit(&canp->wakeup_event);
 #endif
+#else /* CAN_ENFORCE_USE_CALLBACKS == TRUE */
+  canp->rxfull_cb   = NULL;
+  canp->txempty_cb  = NULL;
+  canp->error_cb    = NULL;
+#if CAN_USE_SLEEP_MODE == TRUE
+  canp->wakeup_cb   = NULL;
+#endif
+#endif /* CAN_ENFORCE_USE_CALLBACKS == TRUE */
 }
 
 /**
@@ -129,6 +138,7 @@ void canStop(CANDriver *canp) {
 
   /* The low level driver is stopped.*/
   can_lld_stop(canp);
+  canp->config = NULL;
   canp->state  = CAN_STOP;
 
   /* Threads waiting on CAN APIs are notified that the driver has been
@@ -188,8 +198,8 @@ bool canTryTransmitI(CANDriver *canp,
  * @iclass
  */
 bool canTryReceiveI(CANDriver *canp,
-                     canmbx_t mailbox,
-                     CANRxFrame *crfp) {
+                    canmbx_t mailbox,
+                    CANRxFrame *crfp) {
 
   osalDbgCheckClassI();
   osalDbgCheck((canp != NULL) && (crfp != NULL) &&
@@ -229,10 +239,10 @@ bool canTryReceiveI(CANDriver *canp,
  *
  * @api
  */
-msg_t canTransmit(CANDriver *canp,
-                  canmbx_t mailbox,
-                  const CANTxFrame *ctfp,
-                  systime_t timeout) {
+msg_t canTransmitTimeout(CANDriver *canp,
+                         canmbx_t mailbox,
+                         const CANTxFrame *ctfp,
+                         sysinterval_t timeout) {
 
   osalDbgCheck((canp != NULL) && (ctfp != NULL) &&
                (mailbox <= (canmbx_t)CAN_TX_MAILBOXES));
@@ -277,10 +287,10 @@ msg_t canTransmit(CANDriver *canp,
  *
  * @api
  */
-msg_t canReceive(CANDriver *canp,
-                 canmbx_t mailbox,
-                 CANRxFrame *crfp,
-                 systime_t timeout) {
+msg_t canReceiveTimeout(CANDriver *canp,
+                        canmbx_t mailbox,
+                        CANRxFrame *crfp,
+                        sysinterval_t timeout) {
 
   osalDbgCheck((canp != NULL) && (crfp != NULL) &&
                (mailbox <= (canmbx_t)CAN_RX_MAILBOXES));
@@ -326,8 +336,10 @@ void canSleep(CANDriver *canp) {
   if (canp->state == CAN_READY) {
     can_lld_sleep(canp);
     canp->state = CAN_SLEEP;
+#if CAN_ENFORCE_USE_CALLBACKS == FALSE
     osalEventBroadcastFlagsI(&canp->sleep_event, (eventflags_t)0);
     osalOsRescheduleS();
+#endif
   }
   osalSysUnlock();
 }
@@ -349,8 +361,10 @@ void canWakeup(CANDriver *canp) {
   if (canp->state == CAN_SLEEP) {
     can_lld_wakeup(canp);
     canp->state = CAN_READY;
+#if CAN_ENFORCE_USE_CALLBACKS == FALSE
     osalEventBroadcastFlagsI(&canp->wakeup_event, (eventflags_t)0);
     osalOsRescheduleS();
+#endif
   }
   osalSysUnlock();
 }

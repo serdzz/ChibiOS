@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio.
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio.
 
     This file is part of ChibiOS.
 
@@ -96,7 +96,6 @@ struct ch_mutex {
 /* External declarations.                                                    */
 /*===========================================================================*/
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -124,7 +123,6 @@ extern "C" {
  * @param[out] mp       pointer to a @p mutex_t structure
  * @return              The mutex queue status.
  *
- * @deprecated
  * @sclass
  */
 static inline bool chMtxQueueNotEmptyS(mutex_t *mp) {
@@ -140,9 +138,9 @@ static inline bool chMtxQueueNotEmptyS(mutex_t *mp) {
  * @return              A pointer to the next mutex in the stack.
  * @retval NULL         if the stack is empty.
  *
- * @sclass
+ * @xclass
  */
-static inline mutex_t *chMtxGetNextMutexS(void) {
+static inline mutex_t *chMtxGetNextMutexX(void) {
 
   return chThdGetSelfX()->mtxlist;
 }

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -91,10 +91,14 @@ void wdgStop(WDGDriver *wdgp) {
   osalDbgCheck(wdgp != NULL);
 
   osalSysLock();
+
   osalDbgAssert((wdgp->state == WDG_STOP) || (wdgp->state == WDG_READY),
                 "invalid state");
+
   wdg_lld_stop(wdgp);
-  wdgp->state = WDG_STOP;
+  wdgp->config = NULL;
+  wdgp->state  = WDG_STOP;
+
   osalSysUnlock();
 }
 

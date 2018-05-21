@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -43,6 +43,17 @@
  */
 #define CORTEX_PRIORITY_BITS    2
 
+/* If the device type is not externally defined, for example from the Makefile,
+   then a file named board.h is included. This file must contain a device
+   definition compatible with the vendor include file.*/
+#if !defined(STM32L011xx) && !defined(STM32L031xx) &&                       \
+    !defined(STM32L051xx) && !defined(STM32L052xx) &&                       \
+    !defined(STM32L053xx) && !defined(STM32L061xx) &&                       \
+    !defined(STM32L062xx) && !defined(STM32L063xx) &&                       \
+    !defined(STM32L073xx)
+#include "board.h"
+#endif
+
 /**
  * @brief   Number of interrupt vectors.
  * @note    This number does not include the 16 system vectors and must be
@@ -54,20 +65,13 @@
    asm module.*/
 #if !defined(_FROM_ASM_)
 
-/* If the device type is not externally defined, for example from the Makefile,
-   then a file named board.h is included. This file must contain a device
-   definition compatible with the vendor include file.*/
-#if !defined(STM32L051xx) && !defined(STM32L052xx) &&                       \
-    !defined(STM32L053xx) && !defined(STM32L062xx) &&                       \
-    !defined(STM32L063xx) && !defined(STM32L061xx)
-#include "board.h"
-#endif
-
 /* Including the device CMSIS header. Note, we are not using the definitions
    from this header because we need this file to be usable also from
    assembler source files. We verify that the info matches instead.*/
 #include "stm32l0xx.h"
 
+/*lint -save -e9029 [10.4] Signedness comes from external files, it is
+  unpredictable but gives no problems.*/
 #if CORTEX_MODEL != __CORTEX_M
 #error "CMSIS __CORTEX_M mismatch"
 #endif
@@ -75,6 +79,7 @@
 #if CORTEX_PRIORITY_BITS != __NVIC_PRIO_BITS
 #error "CMSIS __NVIC_PRIO_BITS mismatch"
 #endif
+/*lint -restore*/
 
 #endif /* !defined(_FROM_ASM_) */
 

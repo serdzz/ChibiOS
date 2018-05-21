@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -114,6 +114,10 @@ OSAL_IRQ_HANDLER(STM32_ADC1_HANDLER) {
 
   adc_lld_serve_interrupt(&ADCD1);
 
+#if defined(STM32_ADC_ADC1_IRQ_HOOK)
+  STM32_ADC_ADC1_IRQ_HOOK
+#endif
+
   OSAL_IRQ_EPILOGUE();
 }
 #endif
@@ -149,7 +153,7 @@ void adc_lld_init(void) {
 #endif
 
   /* Calibration procedure.*/
-  rccEnableADC1(FALSE);
+  rccEnableADC1(true);
 
   /* CCR setup.*/
 #if STM32_ADC_SUPPORTS_PRESCALER
@@ -163,7 +167,7 @@ void adc_lld_init(void) {
   osalDbgAssert(ADC1->CR != 0, "invalid register state");
   while (ADC1->CR & ADC_CR_ADCAL)
     ;
-  rccDisableADC1(FALSE);
+  rccDisableADC1();
 }
 
 /**
@@ -186,7 +190,7 @@ void adc_lld_start(ADCDriver *adcp) {
                             (void *)adcp);
       osalDbgAssert(!b, "stream already allocated");
       dmaStreamSetPeripheral(adcp->dmastp, &ADC1->DR);
-      rccEnableADC1(FALSE);
+      rccEnableADC1(true);
 
       /* Clock settings.*/
       adcp->adc->CFGR2 = STM32_ADC_ADC1_CKMODE;
@@ -232,7 +236,7 @@ void adc_lld_stop(ADCDriver *adcp) {
 
 #if STM32_ADC_USE_ADC1
     if (&ADCD1 == adcp)
-      rccDisableADC1(FALSE);
+      rccDisableADC1();
 #endif
   }
 }
@@ -330,6 +334,98 @@ void adc_lld_serve_interrupt(ADCDriver *adcp) {
     }
   }
 }
+
+/**
+ * @brief   Enables the VREFEN bit.
+ * @details The VREFEN bit is required in order to sample the VREF channel.
+ * @note    This is an STM32-only functionality.
+ * @note    This function is meant to be called after @p adcStart().
+ *
+ * @param[in] adcp      pointer to the @p ADCDriver object
+ *
+ * @notapi
+ */
+void adcSTM32EnableVREF(void) {
+
+  ADC->CCR |= ADC_CCR_VREFEN;
+}
+
+/**
+ * @brief   Disables the VREFEN bit.
+ * @details The VREFEN bit is required in order to sample the VREF channel.
+ * @note    This is an STM32-only functionality.
+ * @note    This function is meant to be called after @p adcStart().
+ *
+ * @param[in] adcp      pointer to the @p ADCDriver object
+ *
+ * @notapi
+ */
+void adcSTM32DisableVREF(void) {
+
+  ADC->CCR &= ~ADC_CCR_VREFEN;
+}
+
+/**
+ * @brief   Enables the TSEN bit.
+ * @details The TSEN bit is required in order to sample the internal
+ *          temperature sensor and internal reference voltage.
+ * @note    This is an STM32-only functionality.
+ *
+ * @param[in] adcp      pointer to the @p ADCDriver object
+ *
+ * @notapi
+ */
+void adcSTM32EnableTS(void) {
+
+  ADC->CCR |= ADC_CCR_TSEN;
+}
+
+/**
+ * @brief   Disables the TSEN bit.
+ * @details The TSEN bit is required in order to sample the internal
+ *          temperature sensor and internal reference voltage.
+ * @note    This is an STM32-only functionality.
+ *
+ * @param[in] adcp      pointer to the @p ADCDriver object
+ *
+ * @notapi
+ */
+void adcSTM32DisableTS(void) {
+
+  ADC->CCR &= ~ADC_CCR_TSEN;
+}
+
+#if defined(ADC_CCR_VBATEN) || defined(__DOXYGEN__)
+/**
+ * @brief   Enables the VBATEN bit.
+ * @details The VBATEN bit is required in order to sample the VBAT channel.
+ * @note    This is an STM32-only functionality.
+ * @note    This function is meant to be called after @p adcStart().
+ *
+ * @param[in] adcp      pointer to the @p ADCDriver object
+ *
+ * @notapi
+ */
+void adcSTM32EnableVBAT(void) {
+
+  ADC->CCR |= ADC_CCR_VBATEN;
+}
+
+/**
+ * @brief   Disables the VBATEN bit.
+ * @details The VBATEN bit is required in order to sample the VBAT channel.
+ * @note    This is an STM32-only functionality.
+ * @note    This function is meant to be called after @p adcStart().
+ *
+ * @param[in] adcp      pointer to the @p ADCDriver object
+ *
+ * @notapi
+ */
+void adcSTM32DisableVBAT(void) {
+
+  ADC->CCR &= ~ADC_CCR_VBATEN;
+}
+#endif /* defined(ADC_CCR_VBATEN) */
 
 #endif /* HAL_USE_ADC */
 

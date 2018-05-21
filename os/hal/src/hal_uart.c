@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -120,13 +120,16 @@ void uartStop(UARTDriver *uartp) {
   osalDbgCheck(uartp != NULL);
 
   osalSysLock();
+
   osalDbgAssert((uartp->state == UART_STOP) || (uartp->state == UART_READY),
                 "invalid state");
 
   uart_lld_stop(uartp);
-  uartp->state = UART_STOP;
+  uartp->config  = NULL;
+  uartp->state   = UART_STOP;
   uartp->txstate = UART_TX_IDLE;
   uartp->rxstate = UART_RX_IDLE;
+
   osalSysUnlock();
 }
 
@@ -185,7 +188,7 @@ void uartStartSendI(UARTDriver *uartp, size_t n, const void *txbuf) {
  *
  * @return              The number of data frames not transmitted by the
  *                      stopped transmit operation.
- * @retval 0            There was no transmit operation in progress.
+ * @retval UART_ERR_NOT_ACTIVE if there was no transmit operation in progress.
  *
  * @api
  */
@@ -202,7 +205,7 @@ size_t uartStopSend(UARTDriver *uartp) {
     uartp->txstate = UART_TX_IDLE;
   }
   else {
-    n = 0;
+    n = UART_ERR_NOT_ACTIVE;
   }
   osalSysUnlock();
 
@@ -218,7 +221,7 @@ size_t uartStopSend(UARTDriver *uartp) {
  *
  * @return              The number of data frames not transmitted by the
  *                      stopped transmit operation.
- * @retval 0            There was no transmit operation in progress.
+ * @retval UART_ERR_NOT_ACTIVE if there was no transmit operation in progress.
  *
  * @iclass
  */
@@ -233,7 +236,7 @@ size_t uartStopSendI(UARTDriver *uartp) {
     uartp->txstate = UART_TX_IDLE;
     return n;
   }
-  return 0;
+  return UART_ERR_NOT_ACTIVE;
 }
 
 /**
@@ -291,7 +294,7 @@ void uartStartReceiveI(UARTDriver *uartp, size_t n, void *rxbuf) {
  *
  * @return              The number of data frames not received by the
  *                      stopped receive operation.
- * @retval 0            There was no receive operation in progress.
+ * @retval UART_ERR_NOT_ACTIVE if there was no receive operation in progress.
  *
  * @api
  */
@@ -308,7 +311,7 @@ size_t uartStopReceive(UARTDriver *uartp) {
     uartp->rxstate = UART_RX_IDLE;
   }
   else {
-    n = 0;
+    n = UART_ERR_NOT_ACTIVE;
   }
   osalSysUnlock();
 
@@ -324,7 +327,7 @@ size_t uartStopReceive(UARTDriver *uartp) {
  *
  * @return              The number of data frames not received by the
  *                      stopped receive operation.
- * @retval 0            There was no receive operation in progress.
+ * @retval UART_ERR_NOT_ACTIVE if there was no receive operation in progress.
  *
  * @iclass
  */
@@ -339,7 +342,7 @@ size_t uartStopReceiveI(UARTDriver *uartp) {
     uartp->rxstate = UART_RX_IDLE;
     return n;
   }
-  return 0;
+  return UART_ERR_NOT_ACTIVE;
 }
 
 #if (UART_USE_WAIT == TRUE) || defined(__DOXYGEN__)
@@ -349,6 +352,8 @@ size_t uartStopReceiveI(UARTDriver *uartp) {
  *          sent to the UART or on timeout.
  * @note    The buffers are organized as uint8_t arrays for data sizes below
  *          or equal to 8 bits else it is organized as uint16_t arrays.
+ * @note    This function implements a software timeout, it does not use
+ *          any underlying HW timeout mechanism.
  *
  * @param[in] uartp     pointer to the @p UARTDriver object
  * @param[in,out] np    number of data frames to transmit, on exit the number
@@ -362,7 +367,7 @@ size_t uartStopReceiveI(UARTDriver *uartp) {
  * @api
  */
 msg_t uartSendTimeout(UARTDriver *uartp, size_t *np,
-                      const void *txbuf, systime_t timeout) {
+                      const void *txbuf, sysinterval_t timeout) {
   msg_t msg;
 
   osalDbgCheck((uartp != NULL) && (*np > 0U) && (txbuf != NULL));
@@ -379,7 +384,7 @@ msg_t uartSendTimeout(UARTDriver *uartp, size_t *np,
   /* Waiting for result.*/
   msg = osalThreadSuspendTimeoutS(&uartp->threadtx, timeout);
   if (msg != MSG_OK) {
-    *np = uartStopSendI(uartp);
+    *np -= uartStopSendI(uartp);
   }
   osalSysUnlock();
 
@@ -392,6 +397,8 @@ msg_t uartSendTimeout(UARTDriver *uartp, size_t *np,
  *          physically transmitted or on timeout.
  * @note    The buffers are organized as uint8_t arrays for data sizes below
  *          or equal to 8 bits else it is organized as uint16_t arrays.
+ * @note    This function implements a software timeout, it does not use
+ *          any underlying HW timeout mechanism.
  *
  * @param[in] uartp     pointer to the @p UARTDriver object
  * @param[in,out] np    number of data frames to transmit, on exit the number
@@ -405,7 +412,7 @@ msg_t uartSendTimeout(UARTDriver *uartp, size_t *np,
  * @api
  */
 msg_t uartSendFullTimeout(UARTDriver *uartp, size_t *np,
-                          const void *txbuf, systime_t timeout) {
+                          const void *txbuf, sysinterval_t timeout) {
   msg_t msg;
 
   osalDbgCheck((uartp != NULL) && (*np > 0U) && (txbuf != NULL));
@@ -435,6 +442,8 @@ msg_t uartSendFullTimeout(UARTDriver *uartp, size_t *np,
  *          received or on error/timeout.
  * @note    The buffers are organized as uint8_t arrays for data sizes below
  *          or equal to 8 bits else it is organized as uint16_t arrays.
+ * @note    This function implements a software timeout, it does not use
+ *          any underlying HW timeout mechanism.
  *
  * @param[in] uartp     pointer to the @p UARTDriver object
  * @param[in,out] np    number of data frames to receive, on exit the number
@@ -450,7 +459,7 @@ msg_t uartSendFullTimeout(UARTDriver *uartp, size_t *np,
  * @api
  */
 msg_t uartReceiveTimeout(UARTDriver *uartp, size_t *np,
-                         void *rxbuf, systime_t timeout) {
+                         void *rxbuf, sysinterval_t timeout) {
   msg_t msg;
 
   osalDbgCheck((uartp != NULL) && (*np > 0U) && (rxbuf != NULL));
@@ -466,7 +475,7 @@ msg_t uartReceiveTimeout(UARTDriver *uartp, size_t *np,
   /* Waiting for result.*/
   msg = osalThreadSuspendTimeoutS(&uartp->threadrx, timeout);
   if (msg != MSG_OK) {
-    *np = uartStopReceiveI(uartp);
+    *np -= uartStopReceiveI(uartp);
   }
   osalSysUnlock();
 

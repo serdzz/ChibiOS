@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio.
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio.
 
     This file is part of ChibiOS.
 
@@ -168,7 +168,6 @@ thread_t *chThdCreateFromMemoryPool(memory_pool_t *mp, const char *name,
                   (uint8_t *)wsp + mp->object_size,
                   CH_DBG_STACK_FILL_VALUE);
 #endif
-
 
   chSysLock();
   tp = chThdCreateSuspendedI(&td);

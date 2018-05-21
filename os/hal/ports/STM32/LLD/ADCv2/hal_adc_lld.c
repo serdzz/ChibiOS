@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -125,6 +125,9 @@ OSAL_IRQ_HANDLER(STM32_ADC_HANDLER) {
       _adc_isr_error_code(&ADCD1, ADC_ERR_OVERFLOW);
   }
   /* TODO: Add here analog watchdog handling.*/
+#if defined(STM32_ADC_ADC1_IRQ_HOOK)
+  STM32_ADC_ADC1_IRQ_HOOK
+#endif
 #endif /* STM32_ADC_USE_ADC1 */
 
 #if STM32_ADC_USE_ADC2
@@ -139,6 +142,9 @@ OSAL_IRQ_HANDLER(STM32_ADC_HANDLER) {
       _adc_isr_error_code(&ADCD2, ADC_ERR_OVERFLOW);
   }
   /* TODO: Add here analog watchdog handling.*/
+#if defined(STM32_ADC_ADC2_IRQ_HOOK)
+  STM32_ADC_ADC2_IRQ_HOOK
+#endif
 #endif /* STM32_ADC_USE_ADC2 */
 
 #if STM32_ADC_USE_ADC3
@@ -153,6 +159,9 @@ OSAL_IRQ_HANDLER(STM32_ADC_HANDLER) {
       _adc_isr_error_code(&ADCD3, ADC_ERR_OVERFLOW);
   }
   /* TODO: Add here analog watchdog handling.*/
+#if defined(STM32_ADC_ADC3_IRQ_HOOK)
+  STM32_ADC_ADC3_IRQ_HOOK
+#endif
 #endif /* STM32_ADC_USE_ADC3 */
 
   OSAL_IRQ_EPILOGUE();
@@ -234,7 +243,7 @@ void adc_lld_start(ADCDriver *adcp) {
                             (void *)adcp);
       osalDbgAssert(!b, "stream already allocated");
       dmaStreamSetPeripheral(adcp->dmastp, &ADC1->DR);
-      rccEnableADC1(FALSE);
+      rccEnableADC1(true);
     }
 #endif /* STM32_ADC_USE_ADC1 */
 
@@ -247,7 +256,7 @@ void adc_lld_start(ADCDriver *adcp) {
                             (void *)adcp);
       osalDbgAssert(!b, "stream already allocated");
       dmaStreamSetPeripheral(adcp->dmastp, &ADC2->DR);
-      rccEnableADC2(FALSE);
+      rccEnableADC2(true);
     }
 #endif /* STM32_ADC_USE_ADC2 */
 
@@ -260,7 +269,7 @@ void adc_lld_start(ADCDriver *adcp) {
                             (void *)adcp);
       osalDbgAssert(!b, "stream already allocated");
       dmaStreamSetPeripheral(adcp->dmastp, &ADC3->DR);
-      rccEnableADC3(FALSE);
+      rccEnableADC3(true);
     }
 #endif /* STM32_ADC_USE_ADC3 */
 
@@ -294,17 +303,17 @@ void adc_lld_stop(ADCDriver *adcp) {
 
 #if STM32_ADC_USE_ADC1
     if (&ADCD1 == adcp)
-      rccDisableADC1(FALSE);
+      rccDisableADC1();
 #endif
 
 #if STM32_ADC_USE_ADC2
     if (&ADCD2 == adcp)
-      rccDisableADC2(FALSE);
+      rccDisableADC2();
 #endif
 
 #if STM32_ADC_USE_ADC3
     if (&ADCD3 == adcp)
-      rccDisableADC3(FALSE);
+      rccDisableADC3();
 #endif
   }
 }
@@ -341,7 +350,7 @@ void adc_lld_start_conversion(ADCDriver *adcp) {
   adcp->adc->SR    = 0;
   adcp->adc->SMPR1 = grpp->smpr1;
   adcp->adc->SMPR2 = grpp->smpr2;
-  adcp->adc->SQR1  = grpp->sqr1;
+  adcp->adc->SQR1  = grpp->sqr1 | ADC_SQR1_NUM_CH(grpp->num_channels);
   adcp->adc->SQR2  = grpp->sqr2;
   adcp->adc->SQR3  = grpp->sqr3;
 
@@ -375,7 +384,8 @@ void adc_lld_stop_conversion(ADCDriver *adcp) {
 
   dmaStreamDisable(adcp->dmastp);
   adcp->adc->CR1 = 0;
-  adcp->adc->CR2 = 0;
+  /* Because ticket #822, preserving injected conversions.*/
+  adcp->adc->CR2 &= ~(ADC_CR2_SWSTART);
   adcp->adc->CR2 = ADC_CR2_ADON;
 }
 

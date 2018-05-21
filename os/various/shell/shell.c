@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -235,7 +235,7 @@ static int get_history(ShellHistory *shp, char *line, int dir) {
 
 #if (SHELL_USE_COMPLETION == TRUE) || defined(__DOXYGEN__)
 static void get_completions(ShellConfig *scfg, char *line) {
-  ShellCommand *lcp = shell_local_commands;
+  const ShellCommand *lcp = shell_local_commands;
   const ShellCommand *scp = scfg->sc_commands;
   char **scmp = scfg->sc_completion;
   char help_cmp[] = "help";
@@ -353,7 +353,7 @@ THD_FUNCTION(shellThread, p) {
 #endif
 
   chprintf(chp, SHELL_NEWLINE_STR);
-  chprintf(chp, "ChibiOS/RT Shell"SHELL_NEWLINE_STR);
+  chprintf(chp, "ChibiOS/RT Shell" SHELL_NEWLINE_STR);
   while (true) {
     chprintf(chp, SHELL_PROMPT_STR);
     if (shellGetLine(scfg, line, sizeof(line), shp)) {
@@ -372,7 +372,7 @@ THD_FUNCTION(shellThread, p) {
     n = 0;
     while ((lp = parse_arguments(NULL, &tokp)) != NULL) {
       if (n >= SHELL_MAX_ARGUMENTS) {
-        chprintf(chp, "too many arguments"SHELL_NEWLINE_STR);
+        chprintf(chp, "too many arguments" SHELL_NEWLINE_STR);
         cmd = NULL;
         break;
       }
@@ -394,7 +394,7 @@ THD_FUNCTION(shellThread, p) {
       else if (cmdexec(shell_local_commands, chp, cmd, n, args) &&
           ((scp == NULL) || cmdexec(scp, chp, cmd, n, args))) {
         chprintf(chp, "%s", cmd);
-        chprintf(chp, " ?"SHELL_NEWLINE_STR);
+        chprintf(chp, " ?" SHELL_NEWLINE_STR);
       }
     }
   }
@@ -521,9 +521,9 @@ bool shellGetLine(ShellConfig *scfg, char *line, unsigned size, ShellHistory *sh
 #endif
     if ((c == 8) || (c == 127)) {
       if (p != line) {
-        streamPut(chp, c);
+        streamPut(chp, 0x08);
         streamPut(chp, 0x20);
-        streamPut(chp, c);
+        streamPut(chp, 0x08);
         p--;
       }
       continue;

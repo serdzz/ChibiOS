@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -72,6 +72,7 @@ typedef enum {
  * @brief   Virtual methods table.
  */
 static const struct SDCDriverVMT sdc_vmt = {
+  (size_t)0,
   (bool (*)(void *))sdc_lld_is_card_inserted,
   (bool (*)(void *))sdc_lld_is_write_protected,
   (bool (*)(void *))sdcConnect,
@@ -120,7 +121,7 @@ static bool mode_detect(SDCDriver *sdcp) {
     }
     else {
       sdcp->cardmode = SDC_MODE_CARDTYPE_SDV11;
-    
+
       /* Reset error flag illegal command.*/
       sdc_lld_send_cmd_none(sdcp, MMCSD_CMD_GO_IDLE_STATE, 0);
     }
@@ -183,10 +184,10 @@ static bool sdc_init(SDCDriver *sdcp) {
   uint32_t resp[1];
 
   if ((sdcp->cardmode &  SDC_MODE_CARDTYPE_MASK) == SDC_MODE_CARDTYPE_SDV20) {
-    ocr = 0xC0100000U;
+    ocr = SDC_INIT_OCR_V20;
   }
   else {
-    ocr = 0x80100000U;
+    ocr = SDC_INIT_OCR;
   }
 
   i = 0;
@@ -464,7 +465,7 @@ static bool mmc_set_bus_width(SDCDriver *sdcp) {
   uint32_t resp[1];
   uint32_t cmdarg = mmc_cmd6_construct(MMC_SWITCH_WRITE_BYTE, 183, 0, 0);
 
-  switch(sdcp->config->bus_width){
+  switch (sdcp->config->bus_width) {
   case SDC_MODE_1BIT:
     /* Nothing to do. Bus is already in 1bit mode.*/
     return HAL_SUCCESS;
@@ -594,10 +595,14 @@ void sdcStop(SDCDriver *sdcp) {
   osalDbgCheck(sdcp != NULL);
 
   osalSysLock();
+
   osalDbgAssert((sdcp->state == BLK_STOP) || (sdcp->state == BLK_ACTIVE),
                 "invalid state");
+
   sdc_lld_stop(sdcp);
-  sdcp->state = BLK_STOP;
+  sdcp->config = NULL;
+  sdcp->state  = BLK_STOP;
+
   osalSysUnlock();
 }
 
@@ -803,7 +808,7 @@ bool sdcRead(SDCDriver *sdcp, uint32_t startblk, uint8_t *buf, uint32_t n) {
   osalDbgCheck((sdcp != NULL) && (buf != NULL) && (n > 0U));
   osalDbgAssert(sdcp->state == BLK_READY, "invalid state");
 
-  if ((startblk + n - 1U) > sdcp->capacity){
+  if ((startblk + n - 1U) > sdcp->capacity) {
     sdcp->errors |= SDC_OVERFLOW_ERROR;
     return HAL_FAILED;
   }
@@ -841,7 +846,7 @@ bool sdcWrite(SDCDriver *sdcp, uint32_t startblk,
   osalDbgCheck((sdcp != NULL) && (buf != NULL) && (n > 0U));
   osalDbgAssert(sdcp->state == BLK_READY, "invalid state");
 
-  if ((startblk + n - 1U) > sdcp->capacity){
+  if ((startblk + n - 1U) > sdcp->capacity) {
     sdcp->errors |= SDC_OVERFLOW_ERROR;
     return HAL_FAILED;
   }

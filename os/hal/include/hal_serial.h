@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@
 #define SD_OVERRUN_ERROR        (eventflags_t)128   /**< @brief Overflow.   */
 #define SD_NOISE_ERROR          (eventflags_t)256   /**< @brief Line noise. */
 #define SD_BREAK_DETECTED       (eventflags_t)512   /**< @brief LIN Break.  */
+#define SD_QUEUE_FULL_ERROR     (eventflags_t)1024  /**< @brief Queue full. */
 /** @} */
 
 /*===========================================================================*/
@@ -65,6 +66,8 @@
  *          buffers depending on the requirements of your application.
  * @note    The default is 16 bytes for both the transmission and receive
  *          buffers.
+ * @note    This is a global setting and it can be overridden by low level
+ *          driver specific settings.
  */
 #if !defined(SERIAL_BUFFERS_SIZE) || defined(__DOXYGEN__)
 #define SERIAL_BUFFERS_SIZE         16
@@ -137,7 +140,15 @@ struct SerialDriver {
  *          writes directly on the output queue. This is faster but cannot
  *          be used to write to different channels implementations.
  *
- * @see     chnPutTimeout()
+ * @iclass
+ */
+#define sdPutI(sdp, b) oqPutI(&(sdp)->oqueue, b)
+
+/**
+ * @brief   Direct write to a @p SerialDriver.
+ * @note    This function bypasses the indirect access to the channel and
+ *          writes directly on the output queue. This is faster but cannot
+ *          be used to write to different channels implementations.
  *
  * @api
  */
@@ -149,8 +160,6 @@ struct SerialDriver {
  *          writes directly on the output queue. This is faster but cannot
  *          be used to write to different channels implementations.
  *
- * @see     chnPutTimeout()
- *
  * @api
  */
 #define sdPutTimeout(sdp, b, t) oqPutTimeout(&(sdp)->oqueue, b, t)
@@ -161,7 +170,15 @@ struct SerialDriver {
  *          reads directly from the input queue. This is faster but cannot
  *          be used to read from different channels implementations.
  *
- * @see     chnGetTimeout()
+ * @iclass
+ */
+#define sdGetI(sdp) iqGetI(&(sdp)->iqueue)
+
+/**
+ * @brief   Direct read from a @p SerialDriver.
+ * @note    This function bypasses the indirect access to the channel and
+ *          reads directly from the input queue. This is faster but cannot
+ *          be used to read from different channels implementations.
  *
  * @api
  */
@@ -173,8 +190,6 @@ struct SerialDriver {
  *          reads directly from the input queue. This is faster but cannot
  *          be used to read from different channels implementations.
  *
- * @see     chnGetTimeout()
- *
  * @api
  */
 #define sdGetTimeout(sdp, t) iqGetTimeout(&(sdp)->iqueue, t)
@@ -185,12 +200,19 @@ struct SerialDriver {
  *          writes directly to the output queue. This is faster but cannot
  *          be used to write from different channels implementations.
  *
- * @see     chnWrite()
+ * @iclass
+ */
+#define sdWriteI(sdp, b, n) oqWriteI(&(sdp)->oqueue, b, n)
+
+/**
+ * @brief   Direct blocking write to a @p SerialDriver.
+ * @note    This function bypasses the indirect access to the channel and
+ *          writes directly to the output queue. This is faster but cannot
+ *          be used to write from different channels implementations.
  *
  * @api
  */
-#define sdWrite(sdp, b, n)                                                  \
-  oqWriteTimeout(&(sdp)->oqueue, b, n, TIME_INFINITE)
+#define sdWrite(sdp, b, n) oqWriteTimeout(&(sdp)->oqueue, b, n, TIME_INFINITE)
 
 /**
  * @brief   Direct blocking write to a @p SerialDriver with timeout
@@ -198,8 +220,6 @@ struct SerialDriver {
  * @note    This function bypasses the indirect access to the channel and
  *          writes directly to the output queue. This is faster but cannot
  *          be used to write to different channels implementations.
- *
- * @see     chnWriteTimeout()
  *
  * @api
  */
@@ -212,8 +232,6 @@ struct SerialDriver {
  *          writes directly to the output queue. This is faster but cannot
  *          be used to write to different channels implementations.
  *
- * @see     chnWriteTimeout()
- *
  * @api
  */
 #define sdAsynchronousWrite(sdp, b, n)                                      \
@@ -225,12 +243,19 @@ struct SerialDriver {
  *          reads directly from the input queue. This is faster but cannot
  *          be used to read from different channels implementations.
  *
- * @see     chnRead()
+ * @iclass
+ */
+#define sdReadI(sdp, b, n) iqReadI(&(sdp)->iqueue, b, n, TIME_INFINITE)
+
+/**
+ * @brief   Direct blocking read from a @p SerialDriver.
+ * @note    This function bypasses the indirect access to the channel and
+ *          reads directly from the input queue. This is faster but cannot
+ *          be used to read from different channels implementations.
  *
  * @api
  */
-#define sdRead(sdp, b, n)                                                   \
-  iqReadTimeout(&(sdp)->iqueue, b, n, TIME_INFINITE)
+#define sdRead(sdp, b, n) iqReadTimeout(&(sdp)->iqueue, b, n, TIME_INFINITE)
 
 /**
  * @brief   Direct blocking read from a @p SerialDriver with timeout
@@ -239,20 +264,15 @@ struct SerialDriver {
  *          reads directly from the input queue. This is faster but cannot
  *          be used to read from different channels implementations.
  *
- * @see     chnReadTimeout()
- *
  * @api
  */
-#define sdReadTimeout(sdp, b, n, t)                                         \
-  iqReadTimeout(&(sdp)->iqueue, b, n, t)
+#define sdReadTimeout(sdp, b, n, t) iqReadTimeout(&(sdp)->iqueue, b, n, t)
 
 /**
  * @brief   Direct non-blocking read from a @p SerialDriver.
  * @note    This function bypasses the indirect access to the channel and
  *          reads directly from the input queue. This is faster but cannot
  *          be used to read from different channels implementations.
- *
- * @see     chnReadTimeout()
  *
  * @api
  */
@@ -268,13 +288,19 @@ struct SerialDriver {
 extern "C" {
 #endif
   void sdInit(void);
+#if !defined(SERIAL_ADVANCED_BUFFERING_SUPPORT) ||                          \
+    (SERIAL_ADVANCED_BUFFERING_SUPPORT == FALSE)
   void sdObjectInit(SerialDriver *sdp, qnotify_t inotify, qnotify_t onotify);
+#else
+  void sdObjectInit(SerialDriver *sdp);
+#endif
   void sdStart(SerialDriver *sdp, const SerialConfig *config);
   void sdStop(SerialDriver *sdp);
   void sdIncomingDataI(SerialDriver *sdp, uint8_t b);
   msg_t sdRequestDataI(SerialDriver *sdp);
   bool sdPutWouldBlock(SerialDriver *sdp);
   bool sdGetWouldBlock(SerialDriver *sdp);
+  msg_t sdControl(SerialDriver *sdp, unsigned int operation, void *arg);
 #ifdef __cplusplus
 }
 #endif

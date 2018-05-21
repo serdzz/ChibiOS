@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -130,6 +130,14 @@
  */
 #if !defined(STM32_UART_USART3_IRQ_PRIORITY) || defined(__DOXYGEN__)
 #define STM32_UART_USART3_IRQ_PRIORITY      12
+#endif
+
+/**
+ * @brief   USART3..8 interrupt priority level setting.
+ * @note    Only valid on those devices with a shared IRQ.
+ */
+#if !defined(STM32_UART_USART3_8_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define STM32_UART_USART3_8_IRQ_PRIORITY    12
 #endif
 
 /**
@@ -306,6 +314,17 @@
 #error "Invalid IRQ priority assigned to USART2"
 #endif
 
+#if defined(STM32_USART3_8_HANDLER)
+
+#if (STM32_UART_USE_USART3 || STM32_UART_USE_UART4  ||                      \
+     STM32_UART_USE_UART5  || STM32_UART_USE_USART6 ||                      \
+     STM32_UART_USE_UART7  || STM32_UART_USE_UART8) &&                      \
+     !OSAL_IRQ_IS_VALID_PRIORITY(STM32_SERIAL_USART3_8_PRIORITY)
+#error "Invalid IRQ priority assigned to USART3..8"
+#endif
+
+#else /* !defined(STM32_USART3_8_HANDLER) */
+
 #if STM32_UART_USE_USART3 &&                                                \
     !OSAL_IRQ_IS_VALID_PRIORITY(STM32_UART_USART3_IRQ_PRIORITY)
 #error "Invalid IRQ priority assigned to USART3"
@@ -370,6 +389,8 @@
     !STM32_DMA_IS_VALID_PRIORITY(STM32_UART_UART7_DMA_PRIORITY)
 #error "Invalid DMA priority assigned to UART7"
 #endif
+
+#endif /* !defined(STM32_USART3_8_HANDLER) */
 
 #if STM32_UART_USE_UART8 &&                                                 \
     !STM32_DMA_IS_VALID_PRIORITY(STM32_UART_UART8_DMA_PRIORITY)
@@ -585,6 +606,18 @@ typedef struct {
    */
   uartecb_t                 rxerr_cb;
   /* End of the mandatory fields.*/
+  /**
+   * @brief   Receiver timeout callback.
+   * @details Handles both idle and timeout interrupts depending on configured
+   *          flags in CR registers and supported hardware features.
+   */
+  uartcb_t                  timeout_cb;
+  /**
+   * @brief   Receiver timeout value in terms of number of bit duration.
+   * @details Set it to 0 when you want to handle idle interrupt instead of
+   *          hardware timeout.
+   */
+  uint32_t                  timeout;
   /**
    * @brief   Bit rate.
    */

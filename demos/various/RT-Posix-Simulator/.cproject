@@ -37,7 +37,11 @@
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+<<<<<<< HEAD
 		<project id="RT-Win32-Simulator.null.623541221" name="RT-Win32-Simulator"/>
+=======
+		<project id="RT-Posix-Simulator.null.623541221" name="RT-Posix-Simulator"/>
+>>>>>>> upstream/master
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>

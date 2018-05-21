@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio.
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio.
 
     This file is part of ChibiOS.
 
@@ -25,9 +25,17 @@
  * @{
  */
 
+<<<<<<< HEAD
 #ifdef WIN32
 #include <windows.h>
 #endif
+=======
+#if defined(WIN32)
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
+>>>>>>> upstream/master
 
 #include "ch.h"
 
@@ -112,15 +120,29 @@ void _port_thread_start(msg_t (*pf)(void *), void *p) {
  * @return              The realtime counter value.
  */
 rtcnt_t port_rt_get_counter_value(void) {
+<<<<<<< HEAD
 #ifdef WIN32
     LARGE_INTEGER n;
+=======
+#if defined(WIN32)
+  LARGE_INTEGER n;
+>>>>>>> upstream/master
 
   QueryPerformanceCounter(&n);
 
   return (rtcnt_t)(n.QuadPart / 1000LL);
+<<<<<<< HEAD
 #else
     return 0;
 #endif
+=======
+#else
+  struct timeval tv;
+
+  gettimeofday(&tv, NULL);
+  return ((rtcnt_t)tv.tv_sec * (rtcnt_t)1000000) + (rtcnt_t)tv.tv_usec;
+#endif
+>>>>>>> upstream/master
 }
 
 /** @} */

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio.
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio.
 
     This file is part of ChibiOS.
 
@@ -186,11 +186,11 @@
  */
 #if (CORTEX_MODEL == 3) || defined(__DOXYGEN__)
 
-  #if !defined(CH_CUSTOMER_LICENSED_PORT_CM3)
-    #error "CH_CUSTOMER_LICENSED_PORT_CM3 not defined"
+  #if !defined(CH_CUSTOMER_LIC_PORT_CM3)
+    #error "CH_CUSTOMER_LIC_PORT_CM3 not defined"
   #endif
 
-  #if CH_CUSTOMER_LICENSED_PORT_CM3 == FALSE
+  #if CH_CUSTOMER_LIC_PORT_CM3 == FALSE
     #error "ChibiOS Cortex-M3 port not licensed"
   #endif
 
@@ -215,11 +215,11 @@
 
 #elif (CORTEX_MODEL == 4)
 
-  #if !defined(CH_CUSTOMER_LICENSED_PORT_CM4)
-    #error "CH_CUSTOMER_LICENSED_PORT_CM4 not defined"
+  #if !defined(CH_CUSTOMER_LIC_PORT_CM4)
+    #error "CH_CUSTOMER_LIC_PORT_CM4 not defined"
   #endif
 
-  #if CH_CUSTOMER_LICENSED_PORT_CM4 == FALSE
+  #if CH_CUSTOMER_LIC_PORT_CM4 == FALSE
   #error "ChibiOS Cortex-M4 port not licensed"
   #endif
 
@@ -241,11 +241,11 @@
 
 #elif (CORTEX_MODEL == 7)
 
-  #if !defined(CH_CUSTOMER_LICENSED_PORT_CM7)
-    #error "CH_CUSTOMER_LICENSED_PORT_CM7 not defined"
+  #if !defined(CH_CUSTOMER_LIC_PORT_CM7)
+    #error "CH_CUSTOMER_LIC_PORT_CM7 not defined"
   #endif
 
-  #if CH_CUSTOMER_LICENSED_PORT_CM7 == FALSE
+  #if CH_CUSTOMER_LIC_PORT_CM7 == FALSE
     #error "ChibiOS Cortex-M7 port not licensed"
   #endif
 

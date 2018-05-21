@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -104,10 +104,14 @@ void icuStop(ICUDriver *icup) {
   osalDbgCheck(icup != NULL);
 
   osalSysLock();
+
   osalDbgAssert((icup->state == ICU_STOP) || (icup->state == ICU_READY),
                 "invalid state");
+
   icu_lld_stop(icup);
-  icup->state = ICU_STOP;
+  icup->config = NULL;
+  icup->state  = ICU_STOP;
+
   osalSysUnlock();
 }
 
@@ -182,7 +186,8 @@ void icuStopCapture(ICUDriver *icup) {
 
 /**
  * @brief   Enables notifications.
- * @pre     The ICU unit must have been activated using @p icuStart().
+ * @pre     The ICU unit must have been activated using @p icuStart() and the
+ *          capture started using @p icuStartCapture().
  * @note    If the notification is already enabled then the call has no effect.
  *
  * @param[in] icup      pointer to the @p ICUDriver object
@@ -202,7 +207,8 @@ void icuEnableNotifications(ICUDriver *icup) {
 
 /**
  * @brief   Disables notifications.
- * @pre     The ICU unit must have been activated using @p icuStart().
+ * @pre     The ICU unit must have been activated using @p icuStart() and the
+ *          capture started using @p icuStartCapture().
  * @note    If the notification is already disabled then the call has no effect.
  *
  * @param[in] icup      pointer to the @p ICUDriver object

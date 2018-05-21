@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 */
 
 /**
- * @file    vectors.s
- * @brief   SPC56x vectors table.
+ * @file    vectors.S
+ * @brief   INTC vectors table.
  *
  * @addtogroup PPC_GCC_CORE
  * @{
@@ -2600,12 +2600,12 @@ vector1020:
 vector1021:
 vector1022:
 vector1023:
-         b          _unhandled_irq
+         e_b        _unhandled_irq
 
         .weak       _unhandled_irq
         .type       _unhandled_irq, @function
 _unhandled_irq:
-         b          _unhandled_irq
+         e_b        _unhandled_irq
 
 #endif /* !defined(__DOXYGEN__) */
 

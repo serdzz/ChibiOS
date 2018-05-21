@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@
  * @{
  */
 
-#ifndef _HAL_ACCELEROMETER_H_
-#define _HAL_ACCELEROMETER_H_
+#ifndef HAL_ACCELEROMETER_H
+#define HAL_ACCELEROMETER_H
 
 #include "hal_sensors.h"
 
@@ -48,7 +48,7 @@
  */
 #define _base_accelerometer_methods_alone                                   \
   /* Invoke the set bias procedure.*/                                       \
-  msg_t (*set_bias)(void *instance, int32_t biases[]);                      \
+  msg_t (*set_bias)(void *instance, float biases[]);                        \
   /* Remove bias stored data.*/                                             \
   msg_t (*reset_bias)(void *instance);                                      \
   /* Invoke the set sensitivity procedure.*/                                \
@@ -77,13 +77,15 @@ struct BaseAccelerometerVMT {
   _base_sensor_data
 	
 /**
+ * @extends BaseSensor
+ *
  * @brief   Base accelerometer class.
  * @details This class represents a generic a generic accelerometer.
  */
 typedef struct {
   /** @brief Virtual Methods Table.*/
-  const struct BaseAccelerometerVMT *vmt_baseaccelerometer;
-  _base_sensor_data
+  const struct BaseAccelerometerVMT *vmt;
+  _base_accelerometer_data
 } BaseAccelerometer;
 
 /*===========================================================================*/
@@ -98,12 +100,12 @@ typedef struct {
  * @brief   Accelerometer get axes number.
  *
  * @param[in] ip        pointer to a @p BaseAccelerometer class.
- * @return              The number of axes of the BaseSensor
+ * @return              The number of axes of the BaseAccelerometer
  *
  * @api
  */
 #define accelerometerGetAxesNumber(ip)                                      \
-        (ip)->vmt_baseaccelerometer->get_axes_number(ip)
+        (ip)->vmt->get_channels_number(ip)
 
 /**
  * @brief   Accelerometer read raw data.
@@ -118,7 +120,7 @@ typedef struct {
  * @api
  */
 #define accelerometerReadRaw(ip, dp)                                        \
-        (ip)->vmt_baseaccelerometer->read_raw(ip, dp)
+        (ip)->vmt->read_raw(ip, dp)
 
 /**
  * @brief   Accelerometer read cooked data.
@@ -133,13 +135,12 @@ typedef struct {
  * @api
  */
 #define accelerometerReadCooked(ip, dp)                                     \
-        (ip)->vmt_baseaccelerometer->read_cooked(ip, dp)
+        (ip)->vmt->read_cooked(ip, dp)
 
 /**
  * @brief   Updates accelerometer bias data from received buffer.
  * @note    The bias buffer must have the same length of the
- *          the accelerometer axes number. Bias must be computed on
- *          raw data and is a signed integer.
+ *          the accelerometer axes number.
  *
  *
  * @param[in] ip        pointer to a @p BaseAccelerometer class.
@@ -152,7 +153,7 @@ typedef struct {
  * @api
  */
 #define accelerometerSetBias(ip, bp)                                        \
-        (ip)->vmt_baseaccelerometer->set_bias(ip, bp)
+        (ip)->vmt->set_bias(ip, bp)
 
 /**
  * @brief   Reset accelerometer bias data restoring it to zero.
@@ -166,7 +167,7 @@ typedef struct {
  * @api
  */
 #define accelerometerResetBias(ip)                                          \
-        (ip)->vmt_baseaccelerometer->reset_bias(ip)
+        (ip)->vmt->reset_bias(ip)
 
 /**
  * @brief   Updates accelerometer sensitivity data from received buffer.
@@ -183,7 +184,7 @@ typedef struct {
  * @api
  */
 #define accelerometerSetSensitivity(ip, sp)                                 \
-        (ip)->vmt_baseaccelerometer->set_sensitivity(ip, sp)
+        (ip)->vmt->set_sensitivity(ip, sp)
 
 /**
  * @brief   Reset accelerometer sensitivity data restoring it to its typical
@@ -198,7 +199,7 @@ typedef struct {
  * @api
  */
 #define accelerometerResetSensitivity(ip)                                   \
-        (ip)->vmt_baseaccelerometer->reset_sensitivity(ip)
+        (ip)->vmt->reset_sensitivity(ip)
 /** @} */
 
 /*===========================================================================*/
@@ -213,6 +214,6 @@ extern "C" {
 }
 #endif
 
-#endif /* _HAL_ACCELEROMETER_H_ */
+#endif /* HAL_ACCELEROMETER_H */
 
 /** @} */

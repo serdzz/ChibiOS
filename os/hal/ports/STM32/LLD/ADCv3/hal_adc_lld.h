@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 /**
  * @file    ADCv3/hal_adc_lld.h
- * @brief   STM32F3xx ADC subsystem low level driver header.
+ * @brief   STM32 ADC subsystem low level driver header.
  *
  * @addtogroup ADC
  * @{
@@ -264,14 +264,14 @@
 /**
  * @brief   ADC3 interrupt priority level setting.
  */
-#if !defined(STM32_ADC3_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#if !defined(STM32_ADC_ADC3_IRQ_PRIORITY) || defined(__DOXYGEN__)
 #define STM32_ADC_ADC3_IRQ_PRIORITY         5
 #endif
 
 /**
  * @brief   ADC4 interrupt priority level setting.
  */
-#if !defined(STM32_ADC4_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#if !defined(STM32_ADC_ADC4_IRQ_PRIORITY) || defined(__DOXYGEN__)
 #define STM32_ADC_ADC4_IRQ_PRIORITY         5
 #endif
 
@@ -414,8 +414,10 @@
 #endif
 
 /* ISR arrangments checks.*/
+#if STM32_HAS_ADC1 && STM32_HAS_ADC2
 #if STM32_ADC1_NUMBER != STM32_ADC2_NUMBER
 #error "ADCv3 driver expects STM32_ADC1_NUMBER == STM32_ADC2_NUMBER from registry"
+#endif
 #endif
 
 /* ADC IRQ priority tests.*/
@@ -424,7 +426,6 @@
 #error "Invalid IRQ priority assigned to ADC1"
 #endif
 
-/* ADC IRQ priority tests.*/
 #if STM32_ADC_USE_ADC2 &&                                                   \
     !OSAL_IRQ_IS_VALID_PRIORITY(STM32_ADC_ADC12_IRQ_PRIORITY)
 #error "Invalid IRQ priority assigned to ADC2"

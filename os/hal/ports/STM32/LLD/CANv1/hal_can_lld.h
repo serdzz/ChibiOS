@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -105,6 +105,14 @@
 #endif
 
 /**
+ * @brief   CAN3 driver enable switch.
+ * @details If set to @p TRUE the support for CAN3 is included.
+ */
+#if !defined(STM32_CAN_USE_CAN3) || defined(__DOXYGEN__)
+#define STM32_CAN_USE_CAN3                  FALSE
+#endif
+
+/**
  * @brief   CAN1 interrupt priority level setting.
  */
 #if !defined(STM32_CAN_CAN1_IRQ_PRIORITY) || defined(__DOXYGEN__)
@@ -120,9 +128,37 @@
 #endif
 /** @} */
 
+/**
+ * @brief   CAN3 interrupt priority level setting.
+ */
+#if !defined(STM32_CAN_CAN3_IRQ_PRIORITY) || defined(__DOXYGEN__)
+#define STM32_CAN_CAN3_IRQ_PRIORITY         11
+#endif
+/** @} */
+
 /*===========================================================================*/
 /* Derived constants and error checks.                                       */
 /*===========================================================================*/
+
+#if !defined(STM32_HAS_CAN1)
+#error "STM32_HAS_CAN1 not defined in registry"
+#endif
+
+#if !defined(STM32_HAS_CAN2)
+#error "STM32_HAS_CAN2 not defined in registry"
+#endif
+
+#if !defined(STM32_HAS_CAN3)
+#error "STM32_HAS_CAN3 not defined in registry"
+#endif
+
+#if (STM32_HAS_CAN1 | STM32_HAS_CAN2) && !defined(STM32_CAN_MAX_FILTERS)
+#error "STM32_CAN_MAX_FILTERS not defined in registry"
+#endif
+
+#if STM32_HAS_CAN3 && !defined(STM32_CAN3_MAX_FILTERS)
+#error "STM32_CAN3_MAX_FILTERS not defined in registry"
+#endif
 
 #if STM32_CAN_USE_CAN1 && !STM32_HAS_CAN1
 #error "CAN1 not present in the selected device"
@@ -132,7 +168,11 @@
 #error "CAN2 not present in the selected device"
 #endif
 
-#if !STM32_CAN_USE_CAN1 && !STM32_CAN_USE_CAN2
+#if STM32_CAN_USE_CAN3 && !STM32_HAS_CAN3
+#error "CAN2 not present in the selected device"
+#endif
+
+#if !STM32_CAN_USE_CAN1 && !STM32_CAN_USE_CAN2 && !STM32_CAN_USE_CAN3
 #error "CAN driver activated but no CAN peripheral assigned"
 #endif
 
@@ -149,9 +189,25 @@
 /*===========================================================================*/
 
 /**
+ * @brief   Type of a structure representing an CAN driver.
+ */
+typedef struct CANDriver CANDriver;
+
+/**
  * @brief   Type of a transmission mailbox index.
  */
 typedef uint32_t canmbx_t;
+
+#if (CAN_ENFORCE_USE_CALLBACKS == TRUE) || defined(__DOXYGEN__)
+/**
+ * @brief   Type of a CAN notification callback.
+ *
+ * @param[in] canp      pointer to the @p CANDriver object triggering the
+ *                      callback
+ * @param[in] flags     flags associated to the mailbox callback
+ */
+typedef void (*can_callback_t)(CANDriver *canp, uint32_t flags);
+#endif
 
 /**
  * @brief   CAN transmission frame.
@@ -176,6 +232,7 @@ typedef struct {
     uint8_t                 data8[8];       /**< @brief Frame data.         */
     uint16_t                data16[4];      /**< @brief Frame data.         */
     uint32_t                data32[2];      /**< @brief Frame data.         */
+    uint64_t                data64[1];      /**< @brief Frame data.         */
   };
 } CANTxFrame;
 
@@ -206,6 +263,7 @@ typedef struct {
     uint8_t                 data8[8];       /**< @brief Frame data.         */
     uint16_t                data16[4];      /**< @brief Frame data.         */
     uint32_t                data32[2];      /**< @brief Frame data.         */
+    uint64_t                data64[1];      /**< @brief Frame data.         */
   };
 } CANRxFrame;
 
@@ -217,7 +275,7 @@ typedef struct {
   /**
    * @brief   Number of the filter to be programmed.
    */
-  uint32_t                  filter;
+  uint32_t                  filter:16;
   /**
    * @brief   Filter mode.
    * @note    This bit represent the CAN_FM1R register bit associated to this
@@ -267,7 +325,7 @@ typedef struct {
 /**
  * @brief   Structure representing an CAN driver.
  */
-typedef struct {
+struct CANDriver {
   /**
    * @brief   Driver state.
    */
@@ -284,6 +342,7 @@ typedef struct {
    * @brief   Receive threads queue.
    */
   threads_queue_t           rxqueue;
+#if (CAN_ENFORCE_USE_CALLBACKS == FALSE) || defined(__DOXYGEN__)
   /**
    * @brief   One or more frames become available.
    * @note    After broadcasting this event it will not be broadcasted again
@@ -303,7 +362,6 @@ typedef struct {
    *          transmit mailboxes become empty.
    * @note    The upper 16 bits are transmission error flags associated
    *          to the transmit mailboxes.
-   *
    */
   event_source_t            txempty_event;
   /**
@@ -324,12 +382,41 @@ typedef struct {
    */
   event_source_t            wakeup_event;
 #endif /* CAN_USE_SLEEP_MODE */
+#else /* CAN_ENFORCE_USE_CALLBACKS == TRUE */
+  /**
+   * @brief   One or more frames become available.
+   * @note    After calling this function it will not be called again
+   *          until the received frames queue has been completely emptied. It
+   *          is <b>not</b> called for each received frame. It is
+   *          responsibility of the application to empty the queue by
+   *          repeatedly invoking @p chTryReceiveI().
+   *          This behavior minimizes the interrupt served by the system
+   *          because CAN traffic.
+   */
+  can_callback_t            rxfull_cb;
+  /**
+   * @brief   One or more transmission mailbox become available.
+   * @note    The flags associated to the callback will indicate which
+   *          transmit mailboxes become empty.
+   */
+  can_callback_t            txempty_cb;
+  /**
+   * @brief   A CAN bus error happened.
+   */
+  can_callback_t            error_cb;
+#if (CAN_USE_SLEEP_MODE == TRUE) || defined (__DOXYGEN__)
+  /**
+   * @brief   Exiting sleep state.
+   */
+  can_callback_t            wakeup_cb;
+#endif
+#endif
   /* End of the mandatory fields.*/
   /**
    * @brief   Pointer to the CAN registers.
    */
   CAN_TypeDef               *can;
-} CANDriver;
+};
 
 /*===========================================================================*/
 /* Driver macros.                                                            */
@@ -345,6 +432,10 @@ extern CANDriver CAND1;
 
 #if STM32_CAN_USE_CAN2 && !defined(__DOXYGEN__)
 extern CANDriver CAND2;
+#endif
+
+#if STM32_CAN_USE_CAN3 && !defined(__DOXYGEN__)
+extern CANDriver CAND3;
 #endif
 
 #ifdef __cplusplus
@@ -365,7 +456,8 @@ extern "C" {
   void can_lld_sleep(CANDriver *canp);
   void can_lld_wakeup(CANDriver *canp);
 #endif /* CAN_USE_SLEEP_MODE */
-  void canSTM32SetFilters(uint32_t can2sb, uint32_t num, const CANFilter *cfp);
+  void canSTM32SetFilters(CANDriver *canp, uint32_t can2sb,
+                          uint32_t num, const CANFilter *cfp);
 #ifdef __cplusplus
 }
 #endif

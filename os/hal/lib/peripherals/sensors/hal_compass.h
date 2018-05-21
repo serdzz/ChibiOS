@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@
  * @{
  */
 
-#ifndef _HAL_COMPASS_H_
-#define _HAL_COMPASS_H_
+#ifndef HAL_COMPASS_H
+#define HAL_COMPASS_H
 
 #include "hal_sensors.h"
 
@@ -48,7 +48,7 @@
  */
 #define _base_compass_methods_alone                                         \
   /* Invoke the set bias procedure.*/                                       \
-  msg_t (*set_bias)(void *instance, int32_t biases[]);                      \
+  msg_t (*set_bias)(void *instance, float biases[]);                        \
   /* Remove bias stored data.*/                                             \
   msg_t (*reset_bias)(void *instance);                                      \
   /* Invoke the set sensitivity procedure.*/                                \
@@ -78,12 +78,14 @@ struct BaseCompassVMT {
   _base_sensor_data
 	
 /**
+ * @extends BaseSensor
+ *
  * @brief   Base compass class.
  * @details This class represents a generic compass.
  */
 typedef struct {
   /** @brief Virtual Methods Table.*/
-  const struct BaseCompassVMT *vmt_basecompass;
+  const struct BaseCompassVMT *vmt;
   _base_compass_data
 } BaseCompass;
 
@@ -98,12 +100,12 @@ typedef struct {
  * @brief   Compass get axes number.
  *
  * @param[in] ip        pointer to a @p BaseCompass class.
- * @return              The number of axes of the BaseSensor
+ * @return              The number of axes of the BaseCompass
  *
  * @api
  */
 #define compassGetAxesNumber(ip)                                            \
-        (ip)->vmt_basecompass->get_axes_number(ip)
+        (ip)->vmt->get_channels_number(ip)
 
 /**
  * @brief   Compass read raw data.
@@ -118,7 +120,7 @@ typedef struct {
  * @api
  */
 #define compassReadRaw(ip, dp)                                              \
-        (ip)->vmt_basecompass->read_raw(ip, dp)
+        (ip)->vmt->read_raw(ip, dp)
 
 /**
  * @brief   Compass read cooked data.
@@ -133,13 +135,12 @@ typedef struct {
  * @api
  */
 #define compassReadCooked(ip, dp)                                           \
-        (ip)->vmt_basecompass->read_cooked(ip, dp)
+        (ip)->vmt->read_cooked(ip, dp)
 
 /**
  * @brief   Updates compass bias data from received buffer.
  * @note    The bias buffer must have the same length of the
- *          the compass axes number. Bias must be computed on
- *          raw data and is a signed integer.
+ *          the compass axes number.
  *
  * @param[in] ip        pointer to a @p BaseCompass class.
  * @param[in] bp        pointer to a buffer of bias values.
@@ -151,7 +152,7 @@ typedef struct {
  * @api
  */
 #define compassSetBias(ip, bp)                                            \
-        (ip)->vmt_basecompass->set_bias(ip, bp)
+        (ip)->vmt->set_bias(ip, bp)
 
 /**
  * @brief   Reset compass bias data restoring it to zero.
@@ -165,7 +166,7 @@ typedef struct {
  * @api
  */
 #define compassResetBias(ip)                                               \
-        (ip)->vmt_basecompass->reset_bias(ip)
+        (ip)->vmt->reset_bias(ip)
 
 /**
  * @brief   Updates compass sensitivity data from received buffer.
@@ -182,7 +183,7 @@ typedef struct {
  * @api
  */
 #define compassSetSensitivity(ip, sp)                                     \
-        (ip)->vmt_basecompass->set_sensitivity(ip, sp)
+        (ip)->vmt->set_sensitivity(ip, sp)
 
 /**
  * @brief   Reset compass sensitivity data restoring it to its typical
@@ -197,7 +198,7 @@ typedef struct {
  * @api
  */
 #define compassResetSensitivity(ip)                                       \
-        (ip)->vmt_basecompass->reset_sensitivity(ip)
+        (ip)->vmt->reset_sensitivity(ip)
 /** @} */
 
 /*===========================================================================*/
@@ -212,6 +213,6 @@ extern "C" {
 }
 #endif
 
-#endif /* _HAL_COMPASS_H_ */
+#endif /* HAL_COMPASS_H */
 
 /** @} */

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@
 #define EXT_CH_MODE_RISING_EDGE     1U  /**< @brief Rising edge callback.   */
 #define EXT_CH_MODE_FALLING_EDGE    2U  /**< @brief Falling edge callback.  */
 #define EXT_CH_MODE_BOTH_EDGES      3U  /**< @brief Both edges callback.    */
+#define EXT_CH_MODE_LOW_LEVEL       5U  /**< @brief low level callback.     */
 
 #define EXT_CH_MODE_AUTOSTART       4U  /**< @brief Channel started
                                              automatically on driver start. */

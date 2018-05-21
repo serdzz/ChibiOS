@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -41,6 +41,13 @@
 #define UART_OVERRUN_ERROR      16  /**< @brief Overflow happened.          */
 #define UART_NOISE_ERROR        32  /**< @brief Noise on the line.          */
 #define UART_BREAK_DETECTED     64  /**< @brief Break detected.             */
+/** @} */
+
+/**
+ * @name    UART error conditions
+ * @{
+ */
+#define UART_ERR_NOT_ACTIVE     (size_t)-1
 /** @} */
 
 /*===========================================================================*/
@@ -185,6 +192,40 @@ typedef enum {
 #define _uart_wakeup_rx_error_isr(uartp)
 #endif /* !UART_USE_WAIT */
 
+#if (UART_USE_WAIT == TRUE) || defined(__DOXYGEN__)
+/**
+ * @brief   Wakes up the waiting thread in case of RX character match.
+ *
+ * @param[in] uartp     pointer to the @p UARTDriver object
+ *
+ * @notapi
+ */
+#define _uart_wakeup_rx_cm_isr(uartp) {                                     \
+  osalSysLockFromISR();                                                     \
+  osalThreadResumeI(&(uartp)->threadrx, MSG_TIMEOUT);                       \
+  osalSysUnlockFromISR();                                                   \
+}
+#else /* !UART_USE_WAIT */
+#define _uart_wakeup_rx_cm_isr(uartp)
+#endif /* !UART_USE_WAIT */
+
+#if (UART_USE_WAIT == TRUE) || defined(__DOXYGEN__)
+/**
+ * @brief   Wakes up the waiting thread in case of RX timeout.
+ *
+ * @param[in] uartp     pointer to the @p UARTDriver object
+ *
+ * @notapi
+ */
+#define _uart_wakeup_rx_timeout_isr(uartp) {                                \
+  osalSysLockFromISR();                                                     \
+  osalThreadResumeI(&(uartp)->threadrx, MSG_TIMEOUT);                       \
+  osalSysUnlockFromISR();                                                   \
+}
+#else /* !UART_USE_WAIT */
+#define _uart_wakeup_rx_timeout_isr(uartp)
+#endif /* !UART_USE_WAIT */
+
 /**
  * @brief   Common ISR code for early TX.
  * @details This code handles the portable part of the ISR code:
@@ -279,7 +320,6 @@ typedef enum {
   _uart_wakeup_rx_error_isr(uartp);                                         \
 }
 
-
 /**
  * @brief   Common ISR code for RX on idle.
  * @details This code handles the portable part of the ISR code:
@@ -298,6 +338,49 @@ typedef enum {
   if ((uartp)->config->rxchar_cb != NULL)                                   \
     (uartp)->config->rxchar_cb(uartp, (uartp)->rxbuf);                      \
 }
+
+/**
+ * @brief   Timeout ISR code for receiver.
+ * @details This code handles the portable part of the ISR code:
+ *          - Callback invocation.
+ *          - Waiting thread wakeup, if any.
+ *          - Driver state transitions.
+ *          .
+ * @note    This macro is meant to be used in the low level drivers
+ *          implementation only.
+ *
+ * @param[in] uartp     pointer to the @p UARTDriver object
+ *
+ * @notapi
+ */
+#define _uart_timeout_isr_code(uartp) {                                     \
+  if ((uartp)->config->timeout_cb != NULL) {                                \
+    (uartp)->config->timeout_cb(uartp);                                     \
+  }                                                                         \
+  _uart_wakeup_rx_timeout_isr(uartp);                                       \
+}
+
+/**
+ * @brief   Character match ISR code for receiver.
+ * @details This code handles the portable part of the ISR code:
+ *          - Callback invocation.
+ *          - Waiting thread wakeup, if any.
+ *          - Driver state transitions.
+ *          .
+ * @note    This macro is meant to be used in the low level drivers
+ *          implementation only.
+ *
+ * @param[in] uartp     pointer to the @p UARTDriver object
+ *
+ * @notapi
+ */
+#define _uart_rx_char_match_isr_code(uartp) {                               \
+  if ((uartp)->config->rx_cm_cb != NULL) {                                  \
+    (uartp)->config->rx_cm_cb(uartp);                                       \
+  }                                                                         \
+  _uart_wakeup_rx_cm_isr(uartp);                                            \
+}
+
 /** @} */
 
 /*===========================================================================*/
@@ -321,11 +404,11 @@ extern "C" {
   size_t uartStopReceiveI(UARTDriver *uartp);
 #if UART_USE_WAIT == TRUE
   msg_t uartSendTimeout(UARTDriver *uartp, size_t *np,
-                        const void *txbuf, systime_t timeout);
+                        const void *txbuf, sysinterval_t timeout);
   msg_t uartSendFullTimeout(UARTDriver *uartp, size_t *np,
-                            const void *txbuf, systime_t timeout);
+                            const void *txbuf, sysinterval_t timeout);
   msg_t uartReceiveTimeout(UARTDriver *uartp, size_t *np,
-                           void *rxbuf, systime_t timeout);
+                           void *rxbuf, sysinterval_t timeout);
 #endif
 #if UART_USE_MUTUAL_EXCLUSION == TRUE
   void uartAcquireBus(UARTDriver *uartp);

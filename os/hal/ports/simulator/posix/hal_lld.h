@@ -1,5 +1,9 @@
 /*
+<<<<<<< HEAD
     ChibiOS - Copyright (C) 2006..2015 Giovanni Di Sirio
+=======
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
+>>>>>>> upstream/master
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -15,16 +19,35 @@
 */
 
 /**
+<<<<<<< HEAD
  * @file    hal_lld.h
+=======
+ * @file    simulator/posix/hal_lld.h
+>>>>>>> upstream/master
  * @brief   Posix simulator HAL subsystem low level driver header.
  *
  * @addtogroup POSIX_HAL
  * @{
  */
 
+<<<<<<< HEAD
 #ifndef _HAL_LLD_H_
 #define _HAL_LLD_H_
 
+=======
+#ifndef HAL_LLD_H
+#define HAL_LLD_H
+
+#if defined(WIN32)
+#include <windows.h>
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <fcntl.h>
+#endif
+>>>>>>> upstream/master
 #include <stdio.h>
 
 /*===========================================================================*/
@@ -34,7 +57,15 @@
 /**
  * @brief   Platform name.
  */
+<<<<<<< HEAD
 #define PLATFORM_NAME   "Posix Simulator"
+=======
+#if defined(WIN32)
+#define PLATFORM_NAME   "Win32 Simulator"
+#else
+#define PLATFORM_NAME   "Posix Simulator"
+#endif
+>>>>>>> upstream/master
 
 /*===========================================================================*/
 /* Driver pre-compile time settings.                                         */
@@ -61,6 +92,10 @@ extern "C" {
 }
 #endif
 
+<<<<<<< HEAD
 #endif /* _HAL_LLD_H_ */
+=======
+#endif /* HAL_LLD_H */
+>>>>>>> upstream/master
 
 /** @} */

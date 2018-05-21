@@ -93,7 +93,9 @@ include $(CHIBIOS)/os/hal/osal/nil/osal.mk
 include $(CHIBIOS)/os/nil/nil.mk
 include $(CHIBIOS)/os/common/ports/e200/compilers/GCC/mk/port.mk
 # Other files (optional).
-include $(CHIBIOS)/test/nil/test.mk
+include $(CHIBIOS)/test/lib/test.mk
+include $(CHIBIOS)/test/nil/nil_test.mk
+include $(CHIBIOS)/test/oslib/oslib_test.mk
 
 # Define linker script file here
 LDSCRIPT= $(STARTUPLD)/SPC560D40.ld
@@ -129,11 +131,12 @@ INCDIR = $(CHIBIOS)/os/license \
 # Compiler settings
 #
 
-#MCU  = e500mc -meabi -msdata=none -mnew-mnemonics -mregnames
-MCU  = e200zx -meabi -msdata=none -mnew-mnemonics -mregnames
+#MCU  = e200zx -meabi -msdata=none -mnew-mnemonics -mregnames # HighTec
+MCU  = e200z0 -meabi -msdata=none -mregnames # Free GCC
 
-#TRGT = powerpc-eabi-
-TRGT = ppc-vle-
+#TRGT = ppc-vle-
+#TRGT = powerpc-eabivle-
+TRGT = ppc-freevle-eabi-
 CC   = $(TRGT)gcc
 CPPC = $(TRGT)g++
 # Enable loading with g++ only if you need C++ runtime support.

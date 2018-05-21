@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -56,7 +56,6 @@ static union {
   uint8_t   buf[MMCSD_BLOCK_SIZE];
 } u;
 #endif /* STM32_SDC_SDIO_UNALIGNED_SUPPORT */
-
 
 /**
  * @brief   SDIO default configuration.
@@ -146,7 +145,7 @@ static bool sdc_lld_prepare_read(SDCDriver *sdcp, uint32_t startblk,
                                    startblk, resp) || MMCSD_R1_ERROR(resp[0]))
       return HAL_FAILED;
   }
-  else{
+  else {
     /* Send read single block command.*/
     if (sdc_lld_send_cmd_short_crc(sdcp, MMCSD_CMD_READ_SINGLE_BLOCK,
                                    startblk, resp) || MMCSD_R1_ERROR(resp[0]))
@@ -184,7 +183,7 @@ static bool sdc_lld_prepare_write(SDCDriver *sdcp, uint32_t startblk,
                                    startblk, resp) || MMCSD_R1_ERROR(resp[0]))
       return HAL_FAILED;
   }
-  else{
+  else {
     /* Write single block command.*/
     if (sdc_lld_send_cmd_short_crc(sdcp, MMCSD_CMD_WRITE_BLOCK,
                                    startblk, resp) || MMCSD_R1_ERROR(resp[0]))
@@ -387,7 +386,7 @@ void sdc_lld_start(SDCDriver *sdcp) {
     dmaStreamSetFIFO(sdcp->dma, STM32_DMA_FCR_DMDIS | STM32_DMA_FCR_FTH_FULL);
 #endif
     nvicEnableVector(STM32_SDIO_NUMBER, STM32_SDC_SDIO_IRQ_PRIORITY);
-    rccEnableSDIO(FALSE);
+    rccEnableSDIO(true);
   }
 
   /* Configuration, card clock is initially stopped.*/
@@ -417,7 +416,7 @@ void sdc_lld_stop(SDCDriver *sdcp) {
     /* Clock deactivation.*/
     nvicDisableVector(STM32_SDIO_NUMBER);
     dmaStreamRelease(sdcp->dma);
-    rccDisableSDIO(FALSE);
+    rccDisableSDIO();
   }
 }
 
@@ -436,7 +435,7 @@ void sdc_lld_start_clk(SDCDriver *sdcp) {
   sdcp->sdio->CLKCR |= SDIO_CLKCR_CLKEN;
 
   /* Clock activation delay.*/
-  osalThreadSleep(OSAL_MS2ST(STM32_SDC_CLOCK_ACTIVATION_DELAY));
+  osalThreadSleep(OSAL_MS2I(STM32_SDC_CLOCK_ACTIVATION_DELAY));
 }
 
 /**
@@ -709,10 +708,10 @@ bool sdc_lld_read_aligned(SDCDriver *sdcp, uint32_t startblk,
                       SDIO_DCTRL_DMAEN |
                       SDIO_DCTRL_DTEN;
 
-  if (sdc_lld_prepare_read(sdcp, startblk, blocks, resp) == TRUE)
+  if (sdc_lld_prepare_read(sdcp, startblk, blocks, resp) == true)
     goto error;
 
-  if (sdc_lld_wait_transaction_end(sdcp, blocks, resp) == TRUE)
+  if (sdc_lld_wait_transaction_end(sdcp, blocks, resp) == true)
     goto error;
 
   return HAL_SUCCESS;
@@ -765,7 +764,7 @@ bool sdc_lld_write_aligned(SDCDriver *sdcp, uint32_t startblk,
   sdcp->sdio->DLEN  = blocks * MMCSD_BLOCK_SIZE;
 
   /* Talk to card what we want from it.*/
-  if (sdc_lld_prepare_write(sdcp, startblk, blocks, resp) == TRUE)
+  if (sdc_lld_prepare_write(sdcp, startblk, blocks, resp) == true)
     goto error;
 
   /* Transaction starts just after DTEN bit setting.*/
@@ -774,7 +773,7 @@ bool sdc_lld_write_aligned(SDCDriver *sdcp, uint32_t startblk,
                       SDIO_DCTRL_DMAEN |
                       SDIO_DCTRL_DTEN;
 
-  if (sdc_lld_wait_transaction_end(sdcp, blocks, resp) == TRUE)
+  if (sdc_lld_wait_transaction_end(sdcp, blocks, resp) == true)
     goto error;
 
   return HAL_SUCCESS;
@@ -813,7 +812,9 @@ bool sdc_lld_read(SDCDriver *sdcp, uint32_t startblk,
     }
     return HAL_SUCCESS;
   }
-#endif /* STM32_SDC_SDIO_UNALIGNED_SUPPORT */
+#else /* !STM32_SDC_SDIO_UNALIGNED_SUPPORT */
+  osalDbgAssert((((unsigned)buf & 3) == 0), "unaligned buffer");
+#endif /* !STM32_SDC_SDIO_UNALIGNED_SUPPORT */
   return sdc_lld_read_aligned(sdcp, startblk, buf, blocks);
 }
 
@@ -846,7 +847,9 @@ bool sdc_lld_write(SDCDriver *sdcp, uint32_t startblk,
     }
     return HAL_SUCCESS;
   }
-#endif /* STM32_SDC_SDIO_UNALIGNED_SUPPORT */
+#else /* !STM32_SDC_SDIO_UNALIGNED_SUPPORT */
+  osalDbgAssert((((unsigned)buf & 3) == 0), "unaligned buffer");
+#endif /* !STM32_SDC_SDIO_UNALIGNED_SUPPORT */
   return sdc_lld_write_aligned(sdcp, startblk, buf, blocks);
 }
 

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -38,9 +38,7 @@
 #define EP0_MAX_INSIZE          64
 #define EP0_MAX_OUTSIZE         64
 
-#if defined(STM32F7XX)
-#define GCCFG_INIT_VALUE        GCCFG_PWRDWN
-#else
+#if STM32_OTG_STEPPING == 1
 #if defined(BOARD_OTG_NOVBUSSENS)
 #define GCCFG_INIT_VALUE        (GCCFG_NOVBUSSENS | GCCFG_VBUSASEN |        \
                                  GCCFG_VBUSBSEN | GCCFG_PWRDWN)
@@ -48,6 +46,14 @@
 #define GCCFG_INIT_VALUE        (GCCFG_VBUSASEN | GCCFG_VBUSBSEN |          \
                                  GCCFG_PWRDWN)
 #endif
+
+#elif STM32_OTG_STEPPING == 2
+#if defined(BOARD_OTG_NOVBUSSENS)
+#define GCCFG_INIT_VALUE        GCCFG_PWRDWN
+#else
+#define GCCFG_INIT_VALUE        (GCCFG_VBDEN | GCCFG_PWRDWN)
+#endif
+
 #endif
 
 /*===========================================================================*/
@@ -109,7 +115,7 @@ static const USBEndpointConfig ep0config = {
 static const stm32_otg_params_t fsparams = {
   STM32_USB_OTG1_RX_FIFO_SIZE / 4,
   STM32_OTG1_FIFO_MEM_SIZE,
-  STM32_OTG1_ENDOPOINTS_NUMBER
+  STM32_OTG1_ENDPOINTS
 };
 #endif
 
@@ -117,7 +123,7 @@ static const stm32_otg_params_t fsparams = {
 static const stm32_otg_params_t hsparams = {
   STM32_USB_OTG2_RX_FIFO_SIZE / 4,
   STM32_OTG2_FIFO_MEM_SIZE,
-  STM32_OTG2_ENDOPOINTS_NUMBER
+  STM32_OTG2_ENDPOINTS
 };
 #endif
 
@@ -272,19 +278,21 @@ static void otg_fifo_read_to_buffer(volatile uint32_t *fifop,
 static void otg_rxfifo_handler(USBDriver *usbp) {
   uint32_t sts, cnt, ep;
 
+  /* Popping the event word out of the RX FIFO.*/
   sts = usbp->otg->GRXSTSP;
+
+  /* Event details.*/
+  cnt = (sts & GRXSTSP_BCNT_MASK) >> GRXSTSP_BCNT_OFF;
+  ep  = (sts & GRXSTSP_EPNUM_MASK) >> GRXSTSP_EPNUM_OFF;
+
   switch (sts & GRXSTSP_PKTSTS_MASK) {
-  case GRXSTSP_SETUP_COMP:
-    break;
   case GRXSTSP_SETUP_DATA:
-    cnt = (sts & GRXSTSP_BCNT_MASK) >> GRXSTSP_BCNT_OFF;
-    ep  = (sts & GRXSTSP_EPNUM_MASK) >> GRXSTSP_EPNUM_OFF;
     otg_fifo_read_to_buffer(usbp->otg->FIFO[0], usbp->epc[ep]->setup_buf,
                             cnt, 8);
     break;
+  case GRXSTSP_SETUP_COMP:
+    break;
   case GRXSTSP_OUT_DATA:
-    cnt = (sts & GRXSTSP_BCNT_MASK) >> GRXSTSP_BCNT_OFF;
-    ep  = (sts & GRXSTSP_EPNUM_MASK) >> GRXSTSP_EPNUM_OFF;
     otg_fifo_read_to_buffer(usbp->otg->FIFO[0],
                             usbp->epc[ep]->out_state->rxbuf,
                             cnt,
@@ -293,10 +301,12 @@ static void otg_rxfifo_handler(USBDriver *usbp) {
     usbp->epc[ep]->out_state->rxbuf += cnt;
     usbp->epc[ep]->out_state->rxcnt += cnt;
     break;
-  case GRXSTSP_OUT_GLOBAL_NAK:
   case GRXSTSP_OUT_COMP:
+    break;
+  case GRXSTSP_OUT_GLOBAL_NAK:
+    break;
   default:
-    ;
+    break;
   }
 }
 
@@ -315,8 +325,12 @@ static bool otg_txfifo_handler(USBDriver *usbp, usbep_t ep) {
     uint32_t n;
 
     /* Transaction end condition.*/
-    if (usbp->epc[ep]->in_state->txcnt >= usbp->epc[ep]->in_state->txsize)
+    if (usbp->epc[ep]->in_state->txcnt >= usbp->epc[ep]->in_state->txsize) {
+#if 1
+      usbp->otg->DIEPEMPMSK &= ~DIEPEMPMSK_INEPTXFEM(ep);
+#endif
       return true;
+    }
 
     /* Number of bytes remaining in current transaction.*/
     n = usbp->epc[ep]->in_state->txsize - usbp->epc[ep]->in_state->txcnt;
@@ -335,10 +349,10 @@ static bool otg_txfifo_handler(USBDriver *usbp, usbep_t ep) {
                                usbp->epc[ep]->in_state->txbuf,
                                n);
     usbp->epc[ep]->in_state->txbuf += n;
+    usbp->epc[ep]->in_state->txcnt += n;
 #if STM32_USB_OTGFIFO_FILL_BASEPRI
   __set_BASEPRI(0);
 #endif
-    usbp->epc[ep]->in_state->txcnt += n;
   }
 }
 
@@ -380,12 +394,17 @@ static void otg_epin_handler(USBDriver *usbp, usbep_t ep) {
   }
   if ((epint & DIEPINT_TXFE) &&
       (otgp->DIEPEMPMSK & DIEPEMPMSK_INEPTXFEM(ep))) {
+#if 0
     /* The thread is made ready, it will be scheduled on ISR exit.*/
     osalSysLockFromISR();
     usbp->txpending |= (1 << ep);
     otgp->DIEPEMPMSK &= ~(1 << ep);
     osalThreadResumeI(&usbp->wait, MSG_OK);
     osalSysUnlockFromISR();
+#else
+    /* TX FIFO empty or emptying.*/
+    otg_txfifo_handler(usbp, ep);
+#endif
   }
 }
 
@@ -408,28 +427,42 @@ static void otg_epout_handler(USBDriver *usbp, usbep_t ep) {
     /* Setup packets handling, setup packets are handled using a
        specific callback.*/
     _usb_isr_invoke_setup_cb(usbp, ep);
-
   }
-  if ((epint & DOEPINT_XFRC) && (otgp->DOEPMSK & DOEPMSK_XFRCM)) {
-    /* Receive transfer complete.*/
-    USBOutEndpointState *osp = usbp->epc[ep]->out_state;
 
-    /* A short packet always terminates a transaction.*/
-    if (((osp->rxcnt % usbp->epc[ep]->out_maxsize) == 0) &&
-        (osp->rxsize < osp->totsize)) {
+  if ((epint & DOEPINT_XFRC) && (otgp->DOEPMSK & DOEPMSK_XFRCM)) {
+    USBOutEndpointState *osp;
+
+    /* OUT state structure pointer for this endpoint.*/
+    osp = usbp->epc[ep]->out_state;
+
+    /* EP0 requires special handling.*/
+    if (ep == 0) {
+
+#if defined(STM32_OTG_SEQUENCE_WORKAROUND)
+      /* If an OUT transaction end interrupt is processed while the state
+         machine is not in an OUT state then it is ignored, this is caused
+         on some devices (L4) apparently injecting spurious data complete
+         words in the RX FIFO.*/
+      if ((usbp->ep0state & USB_OUT_STATE) == 0)
+        return;
+#endif
+
       /* In case the transaction covered only part of the total transfer
          then another transaction is immediately started in order to
          cover the remaining.*/
-      osp->rxsize = osp->totsize - osp->rxsize;
-      osp->rxcnt  = 0;
-      osalSysLockFromISR();
-      usb_lld_start_out(usbp, ep);
-      osalSysUnlockFromISR();
+      if (((osp->rxcnt % usbp->epc[ep]->out_maxsize) == 0) &&
+          (osp->rxsize < osp->totsize)) {
+        osp->rxsize = osp->totsize - osp->rxsize;
+        osp->rxcnt  = 0;
+        osalSysLockFromISR();
+        usb_lld_start_out(usbp, ep);
+        osalSysUnlockFromISR();
+        return;
+      }
     }
-    else {
-      /* End on OUT transfer.*/
-      _usb_isr_invoke_out_cb(usbp, ep);
-    }
+
+    /* End on OUT transfer.*/
+    _usb_isr_invoke_out_cb(usbp, ep);
   }
 }
 
@@ -459,12 +492,17 @@ static void otg_isoc_in_failed_handler(USBDriver *usbp) {
       /* Prepare data for next frame */
       _usb_isr_invoke_in_cb(usbp, ep);
 
+#if 0
       /* Pump out data for next frame */
       osalSysLockFromISR();
       otgp->DIEPEMPMSK &= ~(1 << ep);
       usbp->txpending |= (1 << ep);
       osalThreadResumeI(&usbp->wait, MSG_OK);
       osalSysUnlockFromISR();
+#else
+    /* TX FIFO empty or emptying.*/
+    otg_txfifo_handler(usbp, ep);
+#endif
     }
   }
 }
@@ -512,10 +550,10 @@ static void usb_lld_serve_interrupt(USBDriver *usbp) {
 
   /* Reset interrupt handling.*/
   if (sts & GINTSTS_USBRST) {
-
+#if 0
     /* Resetting pending operations.*/
     usbp->txpending = 0;
-
+#endif
     /* Default reset action.*/
     _usb_reset(usbp);
 
@@ -533,17 +571,17 @@ static void usb_lld_serve_interrupt(USBDriver *usbp) {
     }
 
     /* Clear the Remote Wake-up Signaling.*/
-    otgp->DCTL |= DCTL_RWUSIG;
+    otgp->DCTL &= ~DCTL_RWUSIG;
 
     _usb_wakeup(usbp);
   }
 
   /* Suspend handling.*/
   if (sts & GINTSTS_USBSUSP) {
-
+#if 0
     /* Resetting pending operations.*/
     usbp->txpending = 0;
-
+#endif
     /* Default suspend action.*/
     _usb_suspend(usbp);
   }
@@ -577,6 +615,7 @@ static void usb_lld_serve_interrupt(USBDriver *usbp) {
   }
 
   /* RX FIFO not empty handling.*/
+#if 0
   if (sts & GINTSTS_RXFLVL) {
     /* The interrupt is masked while the thread has control or it would
        be triggered again.*/
@@ -585,25 +624,16 @@ static void usb_lld_serve_interrupt(USBDriver *usbp) {
     osalThreadResumeI(&usbp->wait, MSG_OK);
     osalSysUnlockFromISR();
   }
+#else
+  /* Performing the whole FIFO emptying in the ISR, it is advised to keep
+     this IRQ at a very low priority level.*/
+  if ((sts & GINTSTS_RXFLVL) != 0U) {
+    otg_rxfifo_handler(usbp);
+  }
+#endif
 
   /* IN/OUT endpoints event handling.*/
   src = otgp->DAINT;
-  if (sts & GINTSTS_IEPINT) {
-    if (src & (1 << 0))
-      otg_epin_handler(usbp, 0);
-    if (src & (1 << 1))
-      otg_epin_handler(usbp, 1);
-    if (src & (1 << 2))
-      otg_epin_handler(usbp, 2);
-    if (src & (1 << 3))
-      otg_epin_handler(usbp, 3);
-#if STM32_USB_USE_OTG2
-    if (src & (1 << 4))
-      otg_epin_handler(usbp, 4);
-    if (src & (1 << 5))
-      otg_epin_handler(usbp, 5);
-#endif
-  }
   if (sts & GINTSTS_OEPINT) {
     if (src & (1 << 16))
       otg_epout_handler(usbp, 0);
@@ -613,11 +643,55 @@ static void usb_lld_serve_interrupt(USBDriver *usbp) {
       otg_epout_handler(usbp, 2);
     if (src & (1 << 19))
       otg_epout_handler(usbp, 3);
-#if STM32_USB_USE_OTG2
+#if USB_MAX_ENDPOINTS >= 4
     if (src & (1 << 20))
       otg_epout_handler(usbp, 4);
+#endif
+#if USB_MAX_ENDPOINTS >= 5
     if (src & (1 << 21))
       otg_epout_handler(usbp, 5);
+#endif
+#if USB_MAX_ENDPOINTS >= 6
+    if (src & (1 << 22))
+      otg_epout_handler(usbp, 6);
+#endif
+#if USB_MAX_ENDPOINTS >= 7
+    if (src & (1 << 23))
+      otg_epout_handler(usbp, 7);
+#endif
+#if USB_MAX_ENDPOINTS >= 8
+    if (src & (1 << 24))
+      otg_epout_handler(usbp, 8);
+#endif
+  }
+  if (sts & GINTSTS_IEPINT) {
+    if (src & (1 << 0))
+      otg_epin_handler(usbp, 0);
+    if (src & (1 << 1))
+      otg_epin_handler(usbp, 1);
+    if (src & (1 << 2))
+      otg_epin_handler(usbp, 2);
+    if (src & (1 << 3))
+      otg_epin_handler(usbp, 3);
+#if USB_MAX_ENDPOINTS >= 4
+    if (src & (1 << 4))
+      otg_epin_handler(usbp, 4);
+#endif
+#if USB_MAX_ENDPOINTS >= 5
+    if (src & (1 << 5))
+      otg_epin_handler(usbp, 5);
+#endif
+#if USB_MAX_ENDPOINTS >= 6
+    if (src & (1 << 6))
+      otg_epin_handler(usbp, 6);
+#endif
+#if USB_MAX_ENDPOINTS >= 7
+    if (src & (1 << 7))
+      otg_epin_handler(usbp, 7);
+#endif
+#if USB_MAX_ENDPOINTS >= 8
+    if (src & (1 << 8))
+      otg_epin_handler(usbp, 8);
 #endif
   }
 }
@@ -627,9 +701,6 @@ static void usb_lld_serve_interrupt(USBDriver *usbp) {
 /*===========================================================================*/
 
 #if STM32_USB_USE_OTG1 || defined(__DOXYGEN__)
-#if !defined(STM32_OTG1_HANDLER)
-#error "STM32_OTG1_HANDLER not defined"
-#endif
 /**
  * @brief   OTG1 interrupt handler.
  *
@@ -646,9 +717,6 @@ OSAL_IRQ_HANDLER(STM32_OTG1_HANDLER) {
 #endif
 
 #if STM32_USB_USE_OTG2 || defined(__DOXYGEN__)
-#if !defined(STM32_OTG2_HANDLER)
-#error "STM32_OTG2_HANDLER not defined"
-#endif
 /**
  * @brief   OTG2 interrupt handler.
  *
@@ -678,10 +746,13 @@ void usb_lld_init(void) {
   /* Driver initialization.*/
 #if STM32_USB_USE_OTG1
   usbObjectInit(&USBD1);
+#if 0
   USBD1.wait      = NULL;
+#endif
   USBD1.otg       = OTG_FS;
   USBD1.otgparams = &fsparams;
 
+#if 0
 #if defined(_CHIBIOS_RT_)
   USBD1.tr = NULL;
   /* Filling the thread working area here because the function
@@ -696,13 +767,17 @@ void usb_lld_init(void) {
 #endif /* CH_DBG_FILL_THREADS */
 #endif /* defined(_CHIBIOS_RT_) */
 #endif
+#endif
 
 #if STM32_USB_USE_OTG2
   usbObjectInit(&USBD2);
+#if 0
   USBD2.wait      = NULL;
+#endif
   USBD2.otg       = OTG_HS;
   USBD2.otgparams = &hsparams;
 
+#if 0
 #if defined(_CHIBIOS_RT_)
   USBD2.tr = NULL;
   /* Filling the thread working area here because the function
@@ -716,6 +791,7 @@ void usb_lld_init(void) {
   }
 #endif /* CH_DBG_FILL_THREADS */
 #endif /* defined(_CHIBIOS_RT_) */
+#endif
 #endif
 }
 
@@ -738,7 +814,7 @@ void usb_lld_start(USBDriver *usbp) {
 #if STM32_USB_USE_OTG1
     if (&USBD1 == usbp) {
       /* OTG FS clock enable and reset.*/
-      rccEnableOTG_FS(false);
+      rccEnableOTG_FS(true);
       rccResetOTG_FS();
 
       /* Enables IRQ vector.*/
@@ -758,7 +834,7 @@ void usb_lld_start(USBDriver *usbp) {
 #if STM32_USB_USE_OTG2
     if (&USBD2 == usbp) {
       /* OTG HS clock enable and reset.*/
-      rccEnableOTG_HS(false);
+      rccEnableOTG_HS(true);
       rccResetOTG_HS();
 
       /* ULPI clock is managed depending on the presence of an external
@@ -768,7 +844,7 @@ void usb_lld_start(USBDriver *usbp) {
 #else
       /* Workaround for the problem described here:
          http://forum.chibios.org/phpbb/viewtopic.php?f=16&t=1798.*/
-      rccDisableOTG_HSULPI(true);
+      rccDisableOTG_HSULPI();
 #endif
 
       /* Enables IRQ vector.*/
@@ -800,9 +876,10 @@ void usb_lld_start(USBDriver *usbp) {
     }
 #endif
 
+#if 0
     /* Clearing mask of TXFIFOs to be filled.*/
     usbp->txpending = 0;
-
+#endif
     /* PHY enabled.*/
     otgp->PCGCCTL = 0;
 
@@ -852,6 +929,7 @@ void usb_lld_start(USBDriver *usbp) {
     /* Clears all pending IRQs, if any. */
     otgp->GINTSTS  = 0xFFFFFFFF;
 
+#if 0
 #if defined(_CHIBIOS_RT_)
     /* Creates the data pump thread. Note, it is created only once.*/
     if (usbp->tr == NULL) {
@@ -868,7 +946,7 @@ void usb_lld_start(USBDriver *usbp) {
       chSchRescheduleS();
   }
 #endif
-
+#endif
     /* Global interrupts enable.*/
     otgp->GAHBCFG |= GAHBCFG_GINTMSK;
   }
@@ -891,8 +969,9 @@ void usb_lld_stop(USBDriver *usbp) {
        active.*/
     otg_disable_ep(usbp);
 
+#if 0
     usbp->txpending = 0;
-
+#endif
     otgp->DAINTMSK   = 0;
     otgp->GAHBCFG    = 0;
     otgp->GCCFG      = 0;
@@ -900,16 +979,16 @@ void usb_lld_stop(USBDriver *usbp) {
 #if STM32_USB_USE_OTG1
     if (&USBD1 == usbp) {
       nvicDisableVector(STM32_OTG1_NUMBER);
-      rccDisableOTG_FS(false);
+      rccDisableOTG_FS();
     }
 #endif
 
 #if STM32_USB_USE_OTG2
     if (&USBD2 == usbp) {
       nvicDisableVector(STM32_OTG2_NUMBER);
-      rccDisableOTG_HS(false);
+      rccDisableOTG_HS();
 #if defined(BOARD_OTG2_USES_ULPI)
-      rccDisableOTG_HSULPI(true)
+      rccDisableOTG_HSULPI()
 #endif
     }
 #endif
@@ -959,7 +1038,7 @@ void usb_lld_reset(USBDriver *usbp) {
 
   /* EP0 initialization, it is a special case.*/
   usbp->epc[0] = &ep0config;
-  otgp->oe[0].DOEPTSIZ = 0;
+  otgp->oe[0].DOEPTSIZ = DOEPTSIZ_STUPCNT(3);
   otgp->oe[0].DOEPCTL = DOEPCTL_SD0PID | DOEPCTL_USBAEP | DOEPCTL_EPTYP_CTRL |
                         DOEPCTL_MPSIZ(ep0config.out_maxsize);
   otgp->ie[0].DIEPTSIZ = 0;
@@ -1271,6 +1350,7 @@ void usb_lld_clear_in(USBDriver *usbp, usbep_t ep) {
   usbp->otg->ie[ep].DIEPCTL &= ~DIEPCTL_STALL;
 }
 
+#if 0
 /**
  * @brief   USB data transfer loop.
  * @details This function must be executed by a system thread in order to
@@ -1335,6 +1415,7 @@ void usb_lld_pump(void *p) {
     osalSysLock();
   }
 }
+#endif
 
 #endif /* HAL_USE_USB */
 

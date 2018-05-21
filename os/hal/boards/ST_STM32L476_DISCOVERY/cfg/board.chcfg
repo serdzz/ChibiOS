@@ -6,7 +6,7 @@
   <configuration_settings>
     <templates_path>resources/gencfg/processors/boards/stm32l4xx/templates</templates_path>
     <output_path>..</output_path>
-    <hal_version>3.0.x</hal_version>
+    <hal_version>5.0.x</hal_version>
   </configuration_settings>
   <board_name>STMicroelectronics STM32L476-Discovery</board_name>
   <board_id>ST_STM32L476_DISCOVERY</board_id>
@@ -436,17 +436,17 @@
         AnalogSwitch="Disabled"
         PinLock="Disabled" />
       <pin9
-        ID="OTG_FS_PowerSwitchOn OTG_FS_NOE"
+        ID="OTG_FS_PSON"
         Type="PushPull"
         Level="High"
         Speed="Maximum"
         Resistor="Floating"
-        Mode="Alternate"
-        Alternate="10"
+        Mode="Output"
+        Alternate="0"
         AnalogSwitch="Disabled"
         PinLock="Disabled" />
       <pin10
-        ID="OTG_FS_OverCurrent"
+        ID="OTG_FS_OVCURR"
         Type="PushPull"
         Level="High"
         Speed="Maximum"
@@ -461,9 +461,9 @@
         Level="High"
         Speed="Maximum"
         Resistor="Floating"
-        Mode="Analog"
-        Alternate="10"
-        AnalogSwitch="Enabled"
+        Mode="Input"
+        Alternate="0"
+        AnalogSwitch="Disabled"
         PinLock="Disabled" />
       <pin12
         ID="OTG_FS_ID"
@@ -471,9 +471,9 @@
         Level="High"
         Speed="Maximum"
         Resistor="Floating"
-        Mode="Analog"
+        Mode="Alternate"
         Alternate="10"
-        AnalogSwitch="Enabled"
+        AnalogSwitch="Disabled"
         PinLock="Disabled" />
       <pin13
         ID="MFX_IRQ_OUT"

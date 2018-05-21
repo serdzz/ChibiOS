@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -106,10 +106,14 @@ void extStop(EXTDriver *extp) {
   osalDbgCheck(extp != NULL);
 
   osalSysLock();
+
   osalDbgAssert((extp->state == EXT_STOP) || (extp->state == EXT_ACTIVE),
                 "invalid state");
+
   ext_lld_stop(extp);
-  extp->state = EXT_STOP;
+  extp->config = NULL;
+  extp->state  = EXT_STOP;
+
   osalSysUnlock();
 }
 

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 /**
  * @file    ADCv3/hal_adc_lld.c
- * @brief   STM32F3xx ADC subsystem low level driver source.
+ * @brief   STM32 ADC subsystem low level driver source.
  *
  * @addtogroup ADC
  * @{
@@ -332,25 +332,36 @@ OSAL_IRQ_HANDLER(STM32_ADC1_HANDLER) {
   OSAL_IRQ_PROLOGUE();
 
 #if STM32_ADC_DUAL_MODE
+
   isr  = ADC1->ISR;
   isr |= ADC2->ISR;
   ADC1->ISR = isr;
   ADC2->ISR = isr;
-
+#if defined(STM32_ADC_ADC12_IRQ_HOOK)
+  STM32_ADC_ADC12_IRQ_HOOK
+#endif
   adc_lld_serve_interrupt(&ADCD1, isr);
+
 #else /* !STM32_ADC_DUAL_MODE */
+
 #if STM32_ADC_USE_ADC1
   isr  = ADC1->ISR;
   ADC1->ISR = isr;
-
+#if defined(STM32_ADC_ADC1_IRQ_HOOK)
+  STM32_ADC_ADC1_IRQ_HOOK
+#endif
   adc_lld_serve_interrupt(&ADCD1, isr);
 #endif
+
 #if STM32_ADC_USE_ADC2
   isr  = ADC2->ISR;
   ADC2->ISR = isr;
-
+#if defined(STM32_ADC_ADC2_IRQ_HOOK)
+  STM32_ADC_ADC2_IRQ_HOOK
+#endif
   adc_lld_serve_interrupt(&ADCD2, isr);
 #endif
+
 #endif /* !STM32_ADC_DUAL_MODE */
 
   OSAL_IRQ_EPILOGUE();
@@ -370,7 +381,9 @@ OSAL_IRQ_HANDLER(STM32_ADC3_HANDLER) {
 
   isr  = ADC3->ISR;
   ADC3->ISR = isr;
-
+#if defined(STM32_ADC_ADC3_IRQ_HOOK)
+  STM32_ADC_ADC3_IRQ_HOOK
+#endif
   adc_lld_serve_interrupt(&ADCD3, isr);
 
   OSAL_IRQ_EPILOGUE();
@@ -520,25 +533,42 @@ void adc_lld_init(void) {
 
   /* ADC units pre-initializations.*/
 #if defined(STM32F3XX)
+#if STM32_HAS_ADC1 && STM32_HAS_ADC2
 #if STM32_ADC_USE_ADC1 || STM32_ADC_USE_ADC2
-  rccEnableADC12(FALSE);
+  rccEnableADC12(true);
   rccResetADC12();
   ADC1_2_COMMON->CCR = STM32_ADC_ADC12_CLOCK_MODE | ADC_DMA_MDMA;
-  rccDisableADC12(FALSE);
+  rccDisableADC12();
+#endif
+#else
+#if STM32_ADC_USE_ADC1
+  rccEnableADC12(true);
+  rccResetADC12();
+  ADC1_COMMON->CCR = STM32_ADC_ADC12_CLOCK_MODE | ADC_DMA_MDMA;
+  rccDisableADC12();
+#endif
 #endif
 #if STM32_ADC_USE_ADC3 || STM32_ADC_USE_ADC4
-  rccEnableADC34(FALSE);
+  rccEnableADC34(true);
   rccResetADC34();
   ADC3_4_COMMON->CCR = STM32_ADC_ADC34_CLOCK_MODE | ADC_DMA_MDMA;
-  rccDisableADC34(FALSE);
+  rccDisableADC34();
 #endif
 #endif
 
 #if defined(STM32L4XX)
-  rccEnableADC123(FALSE);
+  rccEnableADC123(true);
   rccResetADC123();
+
+#if defined(ADC1_2_COMMON)
+  ADC1_2_COMMON->CCR = STM32_ADC_ADC123_CLOCK_MODE | ADC_DMA_MDMA;
+#elif defined(ADC123_COMMON)
   ADC123_COMMON->CCR = STM32_ADC_ADC123_CLOCK_MODE | ADC_DMA_MDMA;
-  rccDisableADC123(FALSE);
+#else
+  ADC1_COMMON->CCR = STM32_ADC_ADC123_CLOCK_MODE | ADC_DMA_MDMA;
+#endif
+
+  rccDisableADC123();
 #endif
 }
 
@@ -569,10 +599,10 @@ void adc_lld_start(ADCDriver *adcp) {
 
       clkmask |= (1 << 0);
 #if defined(STM32F3XX)
-      rccEnableADC12(FALSE);
+      rccEnableADC12(true);
 #endif
 #if defined(STM32L4XX)
-      rccEnableADC123(FALSE);
+      rccEnableADC123(true);
 #endif
     }
 #endif /* STM32_ADC_USE_ADC1 */
@@ -588,10 +618,10 @@ void adc_lld_start(ADCDriver *adcp) {
 
       clkmask |= (1 << 1);
 #if defined(STM32F3XX)
-      rccEnableADC12(FALSE);
+      rccEnableADC12(true);
 #endif
 #if defined(STM32L4XX)
-      rccEnableADC123(FALSE);
+      rccEnableADC123(true);
 #endif
     }
 #endif /* STM32_ADC_USE_ADC2 */
@@ -607,10 +637,10 @@ void adc_lld_start(ADCDriver *adcp) {
 
       clkmask |= (1 << 2);
 #if defined(STM32F3XX)
-      rccEnableADC34(FALSE);
+      rccEnableADC34(true);
 #endif
 #if defined(STM32L4XX)
-      rccEnableADC123(FALSE);
+      rccEnableADC123(true);
 #endif
     }
 #endif /* STM32_ADC_USE_ADC3 */
@@ -626,10 +656,10 @@ void adc_lld_start(ADCDriver *adcp) {
 
       clkmask |= (1 << 3);
 #if defined(STM32F3XX)
-      rccEnableADC34(FALSE);
+      rccEnableADC34(true);
 #endif
 #if defined(STM32L4XX)
-      rccEnableADC123(FALSE);
+      rccEnableADC123(true);
 #endif
     }
 #endif /* STM32_ADC_USE_ADC4 */
@@ -696,7 +726,7 @@ void adc_lld_stop(ADCDriver *adcp) {
 #endif
 
 #if STM32_ADC_USE_ADC2
-    if (&ADCD1 == adcp) {
+    if (&ADCD2 == adcp) {
 #if defined(STM32F3XX)
       /* Resetting CCR options except default ones.*/
       adcp->adcc->CCR = STM32_ADC_ADC12_CLOCK_MODE | ADC_DMA_MDMA;
@@ -706,7 +736,7 @@ void adc_lld_stop(ADCDriver *adcp) {
 #endif
 
 #if STM32_ADC_USE_ADC3
-    if (&ADCD1 == adcp) {
+    if (&ADCD3 == adcp) {
 #if defined(STM32F3XX)
       /* Resetting CCR options except default ones.*/
       adcp->adcc->CCR = STM32_ADC_ADC34_CLOCK_MODE | ADC_DMA_MDMA;
@@ -716,7 +746,7 @@ void adc_lld_stop(ADCDriver *adcp) {
 #endif
 
 #if STM32_ADC_USE_ADC4
-    if (&ADCD1 == adcp) {
+    if (&ADCD4 == adcp) {
 #if defined(STM32F3XX)
       /* Resetting CCR options except default ones.*/
       adcp->adcc->CCR = STM32_ADC_ADC34_CLOCK_MODE | ADC_DMA_MDMA;
@@ -726,17 +756,22 @@ void adc_lld_stop(ADCDriver *adcp) {
 #endif
 
 #if defined(STM32F3XX)
+#if STM32_HAS_ADC1 || STM32_HAS_ADC2
     if ((clkmask & 0x3) == 0) {
-      rccDisableADC12(FALSE);
+      rccDisableADC12();
     }
+#endif
+
+#if STM32_HAS_ADC3 || STM32_HAS_ADC4
     if ((clkmask & 0xC) == 0) {
-      rccDisableADC34(FALSE);
+      rccDisableADC34();
     }
+#endif
 #endif
 
 #if defined(STM32L4XX)
     if ((clkmask & 0x7) == 0) {
-      rccDisableADC123(FALSE);
+      rccDisableADC123();
     }
 #endif
   }
@@ -855,7 +890,7 @@ void adc_lld_stop_conversion(ADCDriver *adcp) {
  */
 void adcSTM32EnableVREF(ADCDriver *adcp) {
 
-  adcp->adcc->CCR |= ADC_CCR_VBATEN;
+  adcp->adcc->CCR |= ADC_CCR_VREFEN;
 }
 
 /**
@@ -870,7 +905,7 @@ void adcSTM32EnableVREF(ADCDriver *adcp) {
  */
 void adcSTM32DisableVREF(ADCDriver *adcp) {
 
-  adcp->adcc->CCR &= ~ADC_CCR_VBATEN;
+  adcp->adcc->CCR &= ~ADC_CCR_VREFEN;
 }
 
 /**

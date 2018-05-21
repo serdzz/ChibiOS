@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 */
 
 /**
- * @file    wdg_lld.c
+ * @file    hal_wdg_lld.c
  * @brief   WDG Driver subsystem low level driver source template.
  *
  * @addtogroup WDG
@@ -24,7 +24,7 @@
 
 #include "hal.h"
 
-#if HAL_USE_WDG || defined(__DOXYGEN__)
+#if (HAL_USE_WDG == TRUE) || defined(__DOXYGEN__)
 
 /*===========================================================================*/
 /* Driver local definitions.                                                 */
@@ -34,7 +34,7 @@
 /* Driver exported variables.                                                */
 /*===========================================================================*/
 
-#if PLATFORM_WDG_USE_WDG1 || defined(__DOXYGEN__)
+#if (PLATFORM_WDG_USE_WDG1 == TRUE) || defined(__DOXYGEN__)
 WDGDriver WDGD1;
 #endif
 
@@ -80,7 +80,7 @@ void wdg_lld_start(WDGDriver *wdgp) {
  *
  * @param[in] wdgp      pointer to the @p WDGDriver object
  *
- * @api
+ * @notapi
  */
 void wdg_lld_stop(WDGDriver *wdgp) {
 

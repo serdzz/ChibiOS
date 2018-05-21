@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@
  * @{
  */
 
-#ifndef _HAL_SENSORS_H_
-#define _HAL_SENSORS_H_
+#ifndef HAL_SENSORS_H
+#define HAL_SENSORS_H
 
 /*===========================================================================*/
 /* Driver constants.                                                         */
@@ -45,8 +45,8 @@
  * @brief   BaseSensor specific methods.
  */
 #define _base_sensor_methods_alone                                          \
-  /* Get number of axes.*/                                                  \
-  size_t (*get_axes_number)(void *instance);                                \
+  /* Get number of channels.*/                                              \
+  size_t (*get_channels_number)(void *instance);                            \
   /* Reads the sensor raw data.*/                                           \
   msg_t (*read_raw)(void *instance, int32_t axes[]);                        \
   /* Reads the sensor returning normalized data.*/                          \
@@ -56,6 +56,7 @@
  * @brief   BaseSensor specific methods with inherited ones.
  */
 #define _base_sensor_methods                                                \
+  _base_object_methods                                                      \
   _base_sensor_methods_alone
 
 /**
@@ -71,15 +72,18 @@ struct BaseSensorVMT {
  *          without implementation.
  */
 #define _base_sensor_data
+  _base_object_data                                                         \
 
 /**
+ * @extends BaseObject
+ *
  * @brief   Base stream class.
  * @details This class represents a generic blocking unbuffered sequential
  *          data stream.
  */
 typedef struct {
   /** @brief Virtual Methods Table.*/
-  const struct BaseSensorVMT *vmt_basesensor;
+  const struct BaseSensorVMT *vmt;
   _base_sensor_data
 } BaseSensor;
 
@@ -92,14 +96,14 @@ typedef struct {
  * @{
  */
 /**
- * @brief   Sensors get axes number.
+ * @brief   Sensors get channels number.
  *
  * @param[in] ip        pointer to a @p BaseSensor or derived class.
- * @return              The number of axes of the BaseSensor
+ * @return              The number of channels of the BaseSensor
  *
  * @api
  */
-#define sensorGetAxesNumber(ip) (ip)->vmt_basesensor->get_axes_number(ip)
+#define sensorGetChannelNumber(ip) (ip)->vmt->get_channels_number(ip)
 
 /**
  * @brief   Sensors read raw data.
@@ -113,7 +117,7 @@ typedef struct {
  *
  * @api
  */
-#define sensorReadRaw(ip, dp) (ip)->vmt_basesensor->read_raw(ip, dp)
+#define sensorReadRaw(ip, dp) (ip)->vmt->read_raw(ip, dp)
 
 /**
  * @brief   Sensors read cooked data.
@@ -127,7 +131,7 @@ typedef struct {
  *
  * @api
  */
-#define sensorReadCooked(ip, dp) (ip)->vmt_basesensor->read_cooked(ip, dp)
+#define sensorReadCooked(ip, dp) (ip)->vmt->read_cooked(ip, dp)
 /** @} */
 
 /*===========================================================================*/
@@ -142,6 +146,6 @@ extern "C" {
 }
 #endif
 
-#endif /* _HAL_SENSORS_H_ */
+#endif /* HAL_SENSORS_H */
 
 /** @} */

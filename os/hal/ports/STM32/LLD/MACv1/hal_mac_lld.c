@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -35,6 +35,23 @@
 /*===========================================================================*/
 
 #define BUFFER_SIZE ((((STM32_MAC_BUFFERS_SIZE - 1) | 3) + 1) / 4)
+
+/* Fixing inconsistencies in ST headers.*/
+#if !defined(ETH_MACMIIAR_CR_Div102) && defined(ETH_MACMIIAR_CR_DIV102)
+#define ETH_MACMIIAR_CR_Div102 ETH_MACMIIAR_CR_DIV102
+#endif
+#if !defined(ETH_MACMIIAR_CR_Div62) && defined(ETH_MACMIIAR_CR_DIV62)
+#define ETH_MACMIIAR_CR_Div62 ETH_MACMIIAR_CR_DIV62
+#endif
+#if !defined(ETH_MACMIIAR_CR_Div42) && defined(ETH_MACMIIAR_CR_DIV42)
+#define ETH_MACMIIAR_CR_Div42 ETH_MACMIIAR_CR_DIV42
+#endif
+#if !defined(ETH_MACMIIAR_CR_Div26) && defined(ETH_MACMIIAR_CR_DIV26)
+#define ETH_MACMIIAR_CR_Div26 ETH_MACMIIAR_CR_DIV26
+#endif
+#if !defined(ETH_MACMIIAR_CR_Div16) && defined(ETH_MACMIIAR_CR_DIV16)
+#define ETH_MACMIIAR_CR_Div16 ETH_MACMIIAR_CR_DIV16
+#endif
 
 /* MII divider optimal value.*/
 #if (STM32_HCLK >= 150000000)
@@ -250,7 +267,7 @@ void mac_lld_init(void) {
   rccResetETH();
 
   /* MAC clocks temporary activation.*/
-  rccEnableETH(false);
+  rccEnableETH(true);
 
   /* PHY address setup.*/
 #if defined(BOARD_PHY_ADDRESS)
@@ -278,7 +295,7 @@ void mac_lld_init(void) {
 #endif
 
   /* MAC clocks stopped again.*/
-  rccDisableETH(false);
+  rccDisableETH();
 }
 
 /**
@@ -300,7 +317,7 @@ void mac_lld_start(MACDriver *macp) {
   macp->txptr = (stm32_eth_tx_descriptor_t *)__eth_td;
 
   /* MAC clocks activation and commanded reset procedure.*/
-  rccEnableETH(false);
+  rccEnableETH(true);
 #if defined(STM32_MAC_DMABMR_SR)
   ETH->DMABMR |= ETH_DMABMR_SR;
   while(ETH->DMABMR & ETH_DMABMR_SR)
@@ -379,7 +396,7 @@ void mac_lld_stop(MACDriver *macp) {
     ETH->DMASR    = ETH->DMASR;
 
     /* MAC clocks stopped.*/
-    rccDisableETH(false);
+    rccDisableETH();
 
     /* ISR vector disabled.*/
     nvicDisableVector(STM32_ETH_NUMBER);
@@ -454,6 +471,9 @@ void mac_lld_release_transmit_descriptor(MACTransmitDescriptor *tdp) {
   tdp->physdesc->tdes0 = STM32_TDES0_CIC(STM32_MAC_IP_CHECKSUM_OFFLOAD) |
                          STM32_TDES0_IC | STM32_TDES0_LS | STM32_TDES0_FS |
                          STM32_TDES0_TCH | STM32_TDES0_OWN;
+
+  /* Wait for the write to tdes0 to go through before resuming the DMA.*/
+  __DSB();
 
   /* If the DMA engine is stalled then a restart request is issued.*/
   if ((ETH->DMASR & ETH_DMASR_TPS) == ETH_DMASR_TPS_Suspended) {
@@ -532,6 +552,9 @@ void mac_lld_release_receive_descriptor(MACReceiveDescriptor *rdp) {
 
   /* Give buffer back to the Ethernet DMA.*/
   rdp->physdesc->rdes0 = STM32_RDES0_OWN;
+
+  /* Wait for the write to rdes0 to go through before resuming the DMA.*/
+  __DSB();
 
   /* If the DMA engine is stalled then a restart request is issued.*/
   if ((ETH->DMASR & ETH_DMASR_RPS) == ETH_DMASR_RPS_Suspended) {

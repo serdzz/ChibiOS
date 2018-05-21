@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ static void gpt3cb(GPTDriver *gptp) {
 }
 
 /*
- * GPT2 configuration.
+ * GPT4 configuration.
  */
 static const GPTConfig gpt4cfg = {
   10000,    /* 10kHz timer clock.*/

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio.
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio.
 
     This file is part of ChibiOS.
 
@@ -23,7 +23,7 @@
  * @details This file is a template of the system driver macros provided by
  *          a port.
  *
- * @addtogroup core
+ * @addtogroup port_core
  * @{
  */
 

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -107,6 +107,7 @@ static void usb_pm_reset(USBDriver *usbp) {
  *
  * @param[in] usbp      pointer to the @p USBDriver object
  * @param[in] size      size of the packet buffer to allocate
+ * @return              The packet buffer address.
  */
 static uint32_t usb_pm_alloc(USBDriver *usbp, size_t size) {
   uint32_t next;
@@ -120,7 +121,7 @@ static uint32_t usb_pm_alloc(USBDriver *usbp, size_t size) {
 /**
  * @brief   Reads from a dedicated packet buffer.
  *
- * @param[in] udp       pointer to a @p stm32_usb_descriptor_t
+ * @param[in] ep        endpoint number
  * @param[out] buf      buffer where to copy the packet data
  * @return              The size of the receivee packet.
  *
@@ -477,7 +478,7 @@ void usb_lld_start(USBDriver *usbp) {
 #if STM32_USB_USE_USB1
     if (&USBD1 == usbp) {
       /* USB clock enabled.*/
-      rccEnableUSB(FALSE);
+      rccEnableUSB(true);
       /* Powers up the transceiver while holding the USB in reset state.*/
       STM32_USB->CNTR = CNTR_FRES;
       /* Enabling the USB IRQ vectors, this also gives enough time to allow
@@ -491,7 +492,7 @@ void usb_lld_start(USBDriver *usbp) {
     }
 #endif
     /* Reset procedure enforced on driver start.*/
-    _usb_reset(usbp);
+    usb_lld_reset(usbp);
   }
 }
 
@@ -505,7 +506,7 @@ void usb_lld_start(USBDriver *usbp) {
 void usb_lld_stop(USBDriver *usbp) {
 
   /* If in ready state then disables the USB clock.*/
-  if (usbp->state == USB_STOP) {
+  if (usbp->state != USB_STOP) {
 #if STM32_USB_USE_USB1
     if (&USBD1 == usbp) {
 #if STM32_USB1_HP_NUMBER != STM32_USB1_LP_NUMBER
@@ -513,7 +514,7 @@ void usb_lld_stop(USBDriver *usbp) {
 #endif
       nvicDisableVector(STM32_USB1_LP_NUMBER);
       STM32_USB->CNTR = CNTR_PDWN | CNTR_FRES;
-      rccDisableUSB(FALSE);
+      rccDisableUSB();
     }
 #endif
   }
@@ -587,6 +588,7 @@ void usb_lld_init_endpoint(USBDriver *usbp, usbep_t ep) {
 #else
     osalDbgAssert(false, "isochronous support disabled");
 #endif
+    /* Falls through.*/
   case USB_EP_MODE_TYPE_BULK:
     epr = EPR_EP_TYPE_BULK;
     break;
@@ -643,6 +645,15 @@ void usb_lld_init_endpoint(USBDriver *usbp, usbep_t ep) {
 #else
     epr |= EPR_STAT_RX_NAK;
 #endif
+  }
+
+  /* Resetting the data toggling bits for this endpoint.*/
+  if (STM32_USB->EPR[ep] & EPR_DTOG_RX) {
+    epr |= EPR_DTOG_RX;
+  }
+
+  if (STM32_USB->EPR[ep] & EPR_DTOG_TX) {
+    epr |= EPR_DTOG_TX;
   }
 
   /* EPxR register setup.*/

@@ -1,5 +1,5 @@
 /*
-    ChibiOS - Copyright (C) 2006..2016 Giovanni Di Sirio
+    ChibiOS - Copyright (C) 2006..2018 Giovanni Di Sirio
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -113,11 +113,15 @@ void pwmStop(PWMDriver *pwmp) {
   osalDbgCheck(pwmp != NULL);
 
   osalSysLock();
+
   osalDbgAssert((pwmp->state == PWM_STOP) || (pwmp->state == PWM_READY),
                 "invalid state");
+
   pwm_lld_stop(pwmp);
   pwmp->enabled = 0;
+  pwmp->config  = NULL;
   pwmp->state   = PWM_STOP;
+
   osalSysUnlock();
 }
 
